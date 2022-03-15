@@ -36,5 +36,21 @@ bc += index_count * 2
 music_db = dbt.makeDB(byte_array, bc, entry_count, song_dict)
 bc += 1324 * entry_count
 
+kkAlias = ["kors k", "Disconation", "StripE", "teranoid", "Eagle", "maras k", "The 4th"]
+
 for song in music_db:
-	print(song)
+	found = False
+	for alias in kkAlias:
+		if found == False:
+			if alias.lower() in song[4].lower():
+				found = True
+	
+	if (found == False):
+		continue
+
+	song[1] = "kors k's How to make " + song[3]
+
+	print(song[3])
+	print(song[1])
+	print(song[4] + "\n")
+
