@@ -26,8 +26,27 @@ song_index_dict = dbt.getEntryDict(byte_array, bc, header_array[3])
 bc += header_array[3] * 2
 '''
 
+
 song_index_list = dbt.getEntryList(byte_array, bc, header_array[3])
 bc += header_array[3] * 2
+
+
+song_array = []
+
+bc_copy = bc
+
+for i in range(header_array[2]):
+	song_array.append(byte_array[bc_copy:bc_copy + 1324])
+	bc_copy += 1324
+
+
+
+for i in range(0, 5):
+	print(dbt.stringFromArray(song_array[i], 0, 64))
+
+
+
+
 
 if len(song_index_list) != header_array[2]:
 	raise ValueError("Scores in array do not match number in header.\nEntries listed in header: " + str(header_array[2]) + "\nEntries successfully found: " + len(song_index_list))
@@ -36,7 +55,7 @@ music_db = dbt.makeDB(byte_array, bc, song_index_list)
 bc += 1324 * len(song_index_list)
 
 
-dbt.exportDB(music_db, header_array)
+#dbt.exportDB(music_db, header_array)
 
 
 '''

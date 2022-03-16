@@ -16,6 +16,8 @@ def LEReadData(array, start_index, data_type):
 		length = 4
 	elif data_type == "short":
 		length = 2
+	elif data_type == "long":
+		length = 8
 	else:
 		raise ValueError("Incorrect data type given: " + data_type)
 
