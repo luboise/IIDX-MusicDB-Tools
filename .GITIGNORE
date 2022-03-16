@@ -1,1 +1,3 @@
 music_data.bin
+__pycache__/
+db.json
