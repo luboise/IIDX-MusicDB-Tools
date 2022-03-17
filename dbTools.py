@@ -1,4 +1,42 @@
 from json import dump as makeJSON
+from locale import format_string
+import struct
+
+def arrayFromBinary(bin_path, starting_byte_index, fmt_string, iterations = 1, condense_index = -1):
+	return_values = []
+	bytes_size = struct.calcsize(fmt_string)
+
+	struct_object = struct.Struct(fmt_string)    #instantiates Struct class to use for unpacking the binary (according to header format)
+
+	with open(bin_path, "rb") as f:
+		f.seek(starting_byte_index)     #starts reading from correct place in file
+
+		for i in range(iterations):
+			data = f.read(bytes_size)
+			song_element = list(struct_object.unpack_from(data))
+			if condense_index >= 0:
+				song_element = makeSubList(song_element, 14, 10)
+			return_values.append(song_element)
+
+	if len(return_values) == 1:
+		return return_values[0]
+	else:
+		return return_values
+
+def makeSubList(list, starting_index, sub_list_size):
+	if starting_index < 0:
+		raise ValueError("Incorrect index for start of sub list given: " + str(starting_index))
+	if starting_index + sub_list_size > len(list):
+		raise ValueError(f"Incorrect bounds used.\nSize of list: {len(list)}\nIndex of last value to be added to sublist: {len(list) + sub_list_size}")
+
+	list[starting_index] = [list[starting_index]]
+	for i in range(sub_list_size - 1):
+		list[starting_index].append(list.pop(starting_index + 1))
+
+	return list
+
+	
+
 
 def stringFromArray(array, start_index, char_count):
 	return_string = ""
@@ -48,14 +86,60 @@ def LEReadData(array, start_index, data_type):
 	
 	return index_dict'''
 
+def korskify(music_db, aliases, title_template):
+	genre_counts = {}
 
-def getEntryList(array, start_index, num_entries):
+	for i in range(len(aliases)):
+		aliases[i] = aliases[i].lower()
+
+	for i in range(len(music_db)):
+		song = music_db[i]
+
+		found = False
+		uni_artist = song[3].decode(encoding="utf-8", errors='ignore').lower()
+		
+		for alias in aliases:
+			if found == False:
+				if alias in uni_artist:
+					found = True
+		
+		if (found == False):
+			continue
+		
+		song_genre = song[2]
+		new_title = title_template.replace(b"{genre}", song_genre)
+
+		if song_genre in genre_counts:
+			genre_counts[song_genre] += 1
+			end_index = new_title.find(b"\x00")
+			new_title = new_title[:end_index] + b" " + bytes(str(genre_counts[song_genre]), encoding="utf-8") + new_title[end_index:]
+		else:
+			genre_counts[song_genre] = 1
+
+		new_title = new_title[:64]
+
+		song[0] = new_title
+		song[1] = new_title
+		song[4] = 0
+		song[9] = 0
+		
+		music_db[i] = song
+
+	return music_db
+
+
+def getEntryList(array, start_index, num_entries, raw_binary = False):
 	index_list = []
 	
-	for i in range(num_entries):
-		index_short = LEReadData(array, start_index + (2 * i), "short")
-		if (index_short == len(index_list)):
-			index_list.append(i)
+	if raw_binary == True:
+		for i in range(num_entries):
+			index_short = LEReadData(array, start_index + (2 * i), "short")
+			if (index_short == len(index_list)):
+				index_list.append(i)
+	else:
+		for i in range(num_entries):
+			if (array[i] == len(index_list)):
+				index_list.append(i)
 	
 	return index_list
 
@@ -156,7 +240,7 @@ def makeSongData(songDataArray):
 	return return_list
 
 
-def exportDB(songDataArray, header_array, output_path = "db.json"):
+def exportDBJSON(header_array, songDataArray, output_path = "db.json"):
 	outputDict = {
 		"data_ver": header_array[1],
 		"data": makeSongData(songDataArray)
@@ -164,3 +248,103 @@ def exportDB(songDataArray, header_array, output_path = "db.json"):
 
 	with open(output_path, "w", encoding = "utf-8") as json_path:
 		makeJSON(outputDict, json_path, indent = 4)
+
+def arrayToBinary(file_object, input_array, fmt_string, iterations = 1, offset = 0):
+	struct_object = struct.Struct(fmt_string)    #instantiates Struct class to use for unpacking the binary (according to header format)
+	if not isinstance(input_array[0], list):
+		input_array = [input_array]
+	
+	data_offset = offset
+
+	for i in range(iterations):
+		array = input_array[i]
+		fmt_copy = list(fmt_string)
+		data_counter = 0
+
+		bin_string = struct.pack(fmt_string, *array)
+		file_object.write(bin_string)
+		'''
+		letter_index = -1
+		while fmt_copy != []:
+			for i in range(len(fmt_copy)):
+				if not isInt(fmt_copy[i]):
+					letter_index = i
+					break
+		
+			if letter_index == -1:
+				raise ValueError("Incorrect format given: " + fmt_string)
+
+
+			current_instruction = fmt_copy[:letter_index + 1]
+			for i in range(len(current_instruction)):
+				fmt_copy.pop(0)
+
+			amount = 0
+
+			if len(current_instruction) > 1:
+				for i in range(len(current_instruction) - 1):
+					amount += int(current_instruction[len(current_instruction) - 2 - i]) + 10 ** i
+			else:
+				amount += 1
+			
+			if current_instruction[-1] == "s":
+				file_object.write(array[data_counter])
+				data_counter += 1
+				data_offset += amount
+				
+
+
+			elif current_instruction[-1] == "i":
+				struct_object = struct.Struct("i")
+				for i in range(amount):
+					converted_int = struct_object.pack("i", array[data_counter].to_bytes(4, byteorder = "little", signed=False))
+					file_object.write(converted_int)
+					data_counter += 1
+				data_offset += amount * 4
+
+			elif current_instruction[-1] == "h":
+				struct_object = struct.Struct("h")
+				for i in range(amount):
+					struct_object.pack_into("h", file_object, data_offset, array[data_counter])
+					data_counter += 1
+				data_offset += amount * 2
+			
+			else:
+				raise ValueError("Invalid instruction: " + current_instruction[-1])
+		'''
+
+
+
+def makeIDDB(array, version):
+	return_list = [b"\xff\xff"] * ((version) * 1000)
+	return_list += [b"\x00\x00"] * 1000
+	found_zero = False
+
+
+	for i in range(len(array)):
+		if array[i] != -1:
+			if ((found_zero == False and array[i] == 0) or (found_zero == True and array[i] != 0)):
+				return_list[i] = struct.pack("<H", array[i])
+			else:
+				return_list[i] = struct.pack("<H", array[i])		
+		
+	
+	return_string = b""
+	for item in return_list:
+		return_string += item
+
+	return return_string
+
+
+
+
+
+def exportDBBIN(header_array, index_db, songDataArray, output_path = "music_data (modified).bin"):
+	fmt_header = "<4sihh4x"
+	fmt_chartstring = "<64s64s64s64siiiiiihhhh10B10si120si508si16s16s344s"
+	with open(output_path, "wb") as db_path:
+		arrayToBinary(db_path, header_array, fmt_header)
+		db_path.write(makeIDDB(index_db, header_array[1]))
+
+		write_offset = struct.calcsize(fmt_header) + struct.calcsize(fmt_chartstring)
+		arrayToBinary(db_path, songDataArray, fmt_chartstring, len(songDataArray), write_offset)
