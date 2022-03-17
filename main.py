@@ -29,12 +29,20 @@ bc += header_array[3] * 2
 
 kkAlias = ["kors k", "disconation", "stripe", "teranoid", "eagle", "maras k", "the 4th"]
 
-music_db = dbt.korskify(music_db, kkAlias, b"kors k's How to make {genre}")
+#music_db = dbt.korskify(music_db, kkAlias, b"kors k's How to make {genre}")
 
 
 
-dbt.exportDBBIN(header_array, indices_list, music_db)
-
+#dbt.exportDBBIN(header_array, indices_list, music_db)
+'''
+with open("weirdtitles.txt", "wb") as file:
+	for song in music_db:
+		if song[0] != song[1]:
+			file.write(song[0].strip(b"\x00"))
+			file.write(b"\n")
+			file.write(song[1].strip(b"\x00"))
+			file.write(b"\n\n")
+'''
 
 
 

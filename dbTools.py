@@ -88,12 +88,16 @@ def LEReadData(array, start_index, data_type):
 
 def korskify(music_db, aliases, title_template):
 	genre_counts = {}
+	genre_check = title_template.replace(b"{genre}", b"")
 
 	for i in range(len(aliases)):
 		aliases[i] = aliases[i].lower()
 
 	for i in range(len(music_db)):
 		song = music_db[i]
+		if song[0].startswith(title_template) or song[0].endswith(title_template):
+			continue
+
 
 		found = False
 		uni_artist = song[3].decode(encoding="utf-8", errors='ignore').lower()
@@ -121,6 +125,7 @@ def korskify(music_db, aliases, title_template):
 		song[0] = new_title
 		song[1] = new_title
 		song[4] = 0
+		song[7] = 0
 		song[9] = 0
 		
 		music_db[i] = song
