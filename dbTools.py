@@ -1,8 +1,13 @@
 from json import dump as makeJSON
-from locale import format_string
 import struct
+from dataStores import *
+#from locale import format_string
+#from multiprocessing.sharedctypes import Value
 
-def arrayFromBinary(bin_path, starting_byte_index, fmt_string, iterations = 1, condense_index = -1):
+
+
+
+def arrayFromBinary(bin_path, starting_byte_index, fmt_string, iterations = 1, dict_type = "NONE"):
 	return_values = []
 	bytes_size = struct.calcsize(fmt_string)
 
@@ -14,14 +19,28 @@ def arrayFromBinary(bin_path, starting_byte_index, fmt_string, iterations = 1, c
 		for i in range(iterations):
 			data = f.read(bytes_size)
 			song_element = list(struct_object.unpack_from(data))
-			if condense_index >= 0:
-				song_element = makeSubList(song_element, 14, 10)
-			return_values.append(song_element)
 
-	if len(return_values) == 1:
-		return return_values[0]
+			if dict_type in ["AC", "INF"]:
+				return_values.append(dictFromArray(song_element, dict_type))
+			else:
+				return_values.append(song_element)
+			
+
+	return return_values
+
+def dictFromArray(array, dict_type):	
+	return_dict = {}
+
+	if dict_type == "AC":
+		ref_list = AC_DICT_STRUCTURE
 	else:
-		return return_values
+		ref_list = INF_DICT_STRUCTURE
+
+	for i in range(len(ref_list)):
+		return_dict[ref_list[i]] = array[i]
+
+	return return_dict
+
 
 def makeSubList(list, starting_index, sub_list_size):
 	if starting_index < 0:
@@ -34,8 +53,6 @@ def makeSubList(list, starting_index, sub_list_size):
 		list[starting_index].append(list.pop(starting_index + 1))
 
 	return list
-
-	
 
 
 def stringFromArray(array, start_index, char_count):
@@ -340,13 +357,20 @@ def makeIDDB(array, version):
 
 	return return_string
 
+'''
+def convertINFToAC(song_entry):
+	if len(song_entry) == 51:
+		print("Entry is already in AC format: " + song_entry[0].decode("cd932").strip("\0"))
+		return song_entry
+	elif len(song_entry) != 53:
+		raise ValueError("Bad song data given. Has length of " + str(len(song_entry)))
+'''
 
 
 
 
-def exportDBBIN(header_array, index_db, songDataArray, output_path = "music_data (modified).bin"):
-	fmt_header = "<4sihh4x"
-	fmt_chartstring = "<64s64s64s64siiiiiihhhh10B10si120si508si16s16s344s"
+
+def exportDBBIN(header_array, index_db, songDataArray, fmt_header, fmt_chartstring, output_path = "music_data (modified).bin"):
 	with open(output_path, "wb") as db_path:
 		arrayToBinary(db_path, header_array, fmt_header)
 		db_path.write(makeIDDB(index_db, header_array[1]))

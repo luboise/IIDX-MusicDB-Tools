@@ -1,39 +1,102 @@
 import dbTools as dbt
+import musicdata_tool_inf as infdbt
 import struct
 
 db_path = "music_data.bin"
+inf_db_path = "inf_music_data.bin"
+
+AC_HEADER_FMTSTRING = "<4sIHH4x"
+#AC_CHART_FMTSTRING_ALPHA = "<64s64s64s64sIIIIIIHHHH10B10sI120sI508sI16s16s344s"
+#AC_CHART_FMTSTRING_BETA = "<64s64s64s64sIIIIIIHHHH10B646sII10cH32sI32s32s32s32s32s32s32s32s32s32s4s"
+AC_CHART_FMTSTRING = "<64s64s64s64sIIIIIIHHHH10B6s480s160sII10cH32sI32s32s32s32s32s32s32s32s32s32s4s"
+INF_HEADER_FMTSTRING = "<4sIII"
+INF_CHART_FMTSTRING = "<64s64s64s64sIIIIIIHHHH10B326sII10cH2s32s2sI32s32s32s32s32s32s32s32s32s32s4s"
+
 
 bc = 0
 
-header_array = dbt.arrayFromBinary(db_path, bc, "4sihh4x")
-bc += 16              #skip 4 empty bytes
+header_array = dbt.arrayFromBinary(db_path, bc, AC_HEADER_FMTSTRING)
+bc += 16
 
+header_array = header_array[0]
 
-fmt_string = str(header_array[3]) + "h"
+fmt_string = str(header_array[3]) + "H"
 indices_list = dbt.arrayFromBinary(db_path, bc, fmt_string)
+indices_list = indices_list[0]
 bc += header_array[3] * 2
 
 song_index_list = dbt.getEntryList(indices_list, 0, header_array[3], raw_binary=False)
 
 
-#coming up is index_count * 2 bytes (2 bytes for each index). The value of each index tells of the value in the entries 
 
-
-fmt_string = "64s64s64s64siiiiiihhhh10B10si120si508si16s16s344s"
-music_db = dbt.arrayFromBinary(db_path, bc, fmt_string, header_array[2])
+fmt_string = AC_CHART_FMTSTRING
+music_db = dbt.arrayFromBinary(db_path, bc, fmt_string, header_array[2], "AC")
 bc += header_array[3] * 2
 
 
 
 
 
-kkAlias = ["kors k", "disconation", "stripe", "teranoid", "eagle", "maras k", "the 4th"]
-
-#music_db = dbt.korskify(music_db, kkAlias, b"kors k's How to make {genre}")
 
 
+infbc = 0
 
-#dbt.exportDBBIN(header_array, indices_list, music_db)
+inf_header_array = dbt.arrayFromBinary(inf_db_path, infbc, INF_HEADER_FMTSTRING)
+inf_header_array = inf_header_array[0]
+infbc += 16              #skip 4 empty bytes
+
+
+fmt_string = str(inf_header_array[3]) + "H"
+inf_indices_list = dbt.arrayFromBinary(inf_db_path, infbc, fmt_string)
+inf_indices_list = inf_indices_list[0]
+infbc += inf_header_array[3] * 2
+
+song_index_list = dbt.getEntryList(inf_indices_list, 0, inf_header_array[3], raw_binary=False)
+
+
+
+fmt_string = INF_CHART_FMTSTRING
+inf_music_db = dbt.arrayFromBinary(inf_db_path, infbc, fmt_string, inf_header_array[2], "INF")
+infbc += inf_header_array[3] * 2
+
+for song in inf_music_db:
+	if song["song_id"] == 80015:
+		song["song_id"] = 1000
+		song["game_version"] = 0
+		music_db[0] = song
+
+with open("testnewdb.db", "wb") as write_file:
+	infdbt.writer_1a(write_file, music_db, 29)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#kkAlias = ["kors k", "disconation", "stripe", "teranoid", "eagle", "maras k", "the 4th"]
+
+
+
+
+
+
 '''
 with open("weirdtitles.txt", "wb") as file:
 	for song in music_db:
@@ -98,4 +161,26 @@ for song in music_db:
 		continue
 	
 	print(song)
+'''
+
+
+
+
+
+
+
+
+
+
+
+
+'''
+for i in range(len(music_db)):
+	if music_db[i][0] == (b"\x83\x73\x83\x41\x83\x6D\x8B\xA6\x91\x74\x8B\xC8\x91\xE6\x82\x50\x94\xD4\x81\x68\xE5\xB6\x89\xCE\x81\x68\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"):
+		music_db[i][0] = (b"Piano Concerto Op. 1 (SASORIBI)\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+		music_db[i][0] = music_db[i][0][:64]
+
+
+#dbt.exportDBBIN(header_array, indices_list, music_db, "sasori.bin", AC_HEADER_FMTSTRING, AC_CHART_FMTSTRING)
+
 '''
