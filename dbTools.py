@@ -1,6 +1,8 @@
 from json import dump as makeJSON
 import struct
 from dataStores import *
+import os
+import shutil
 #from locale import format_string
 #from multiprocessing.sharedctypes import Value
 
@@ -8,7 +10,11 @@ from dataStores import *
 
 
 def arrayFromBinary(bin_path, starting_byte_index, fmt_string, iterations = 1, dict_type = "NONE"):
-	return_values = []
+	if dict_type == "NONE":
+		return_values = []
+	else:
+		return_values = {}
+	
 	bytes_size = struct.calcsize(fmt_string)
 
 	struct_object = struct.Struct(fmt_string)    #instantiates Struct class to use for unpacking the binary (according to header format)
@@ -21,7 +27,8 @@ def arrayFromBinary(bin_path, starting_byte_index, fmt_string, iterations = 1, d
 			song_element = list(struct_object.unpack_from(data))
 
 			if dict_type in ["AC", "INF"]:
-				return_values.append(dictFromArray(song_element, dict_type))
+				dict_entry = dictFromArray(song_element, dict_type)
+				return_values[dict_entry["song_id"]] = dict_entry
 			else:
 				return_values.append(song_element)
 			
@@ -377,3 +384,75 @@ def exportDBBIN(header_array, index_db, songDataArray, fmt_header, fmt_chartstri
 
 		write_offset = struct.calcsize(fmt_header) + struct.calcsize(fmt_chartstring)
 		arrayToBinary(db_path, songDataArray, fmt_chartstring, len(songDataArray), write_offset)
+
+
+def encodeToBinary(in_string, length, fill = "\0"):
+	encoded_string = in_string[:length].encode(encoding = "cp932")
+
+	if len(in_string) < length:
+		encoded_string += (fill * (length - len(encoded_string))).encode("cp932")
+
+	return encoded_string
+
+
+def changeID(entry, new_ID):
+	entry["song_id"] = new_ID
+	entry["bga_filename"] = encodeToBinary(str(new_ID), 32)
+
+	return entry
+
+def listDictInsert(main_list, new_element, attribute = "song_id"):
+	for i in range(len(main_list)):
+		if main_list[i][attribute] < new_element[attribute]:
+			main_list.insert(i, new_element)
+			return main_list
+
+	print("Could not insert element into main list: ")
+	print(new_element)
+	print("\n")
+	return main_list
+
+
+def mergeDBs(db_main, db_sub, merge_keys = {}):
+	for song_key in db_sub:         #Each song in new db
+		if song_key in db_main:
+			continue
+
+		if song_key in merge_keys:
+			new_ID = merge_keys[song_key]
+			new_entry = changeID(db_sub[song_key], new_ID)
+		else:
+			new_entry = db_sub[song_key]
+
+		db_main[new_entry["song_id"]] = new_entry
+	
+	return db_main
+
+def makeNewOmniFiles(old_path, new_path, merge_keys):
+	old_data = os.path.join(old_path, "data")
+	old_sound = os.path.join(old_data, "sound")
+	old_previews = os.path.join(old_sound, "preview")
+
+	new_data = os.path.join(new_path, "data")
+	new_sound = os.path.join(new_data, "sound")
+	new_previews = os.path.join(new_sound, "preview")
+
+	for (dirpath, dirnames, filenames) in os.walk(old_previews):
+		for filename in filenames:
+			id = filename[:5]
+			if int(id) in merge_keys:
+				new_id = str(merge_keys[int(id)])
+			else:
+				new_id = id
+
+			old_path = os.path.join(old_previews, filename)
+			folder_path = os.path.join(new_sound, new_id)
+			new_path = os.path.join(folder_path, new_id + "_pre.2dx")
+
+			if not os.path.exists(folder_path):
+				os.makedirs(folder_path)
+			
+			if not os.path.exists(new_path):
+				shutil.copy(old_path, new_path)
+
+	

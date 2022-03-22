@@ -1,7 +1,12 @@
 import dbTools as dbt
 import musicdata_tool_inf as infdbt
 import struct
+import os
+from dataStores import CONVERSION_DICT
 
+cwd = os.getcwd()
+omni_data_folder = os.path.join(cwd, "omni_data")
+output_data_folder = os.path.join(cwd, "data_output")
 db_path = "music_data.bin"
 inf_db_path = "inf_music_data.bin"
 
@@ -59,15 +64,31 @@ fmt_string = INF_CHART_FMTSTRING
 inf_music_db = dbt.arrayFromBinary(inf_db_path, infbc, fmt_string, inf_header_array[2], "INF")
 infbc += inf_header_array[3] * 2
 
-for song in inf_music_db:
-	if song["song_id"] == 80015:
-		song["song_id"] = 1000
-		song["game_version"] = 0
-		music_db[0] = song
 
+merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT)
+
+dbt.makeNewOmniFiles(omni_data_folder, output_data_folder, CONVERSION_DICT)
+
+
+# for song in inf_music_db:
+# 	if song["song_id"] >= 80000:
+# 		print(song["genre"].decode(encoding = "cp932").strip("\0"))
+# 		print(song["title"].decode(encoding = "cp932").strip("\0"))
+# 		print(song["artist"].decode(encoding = "cp932").strip("\0") + "\n")
+
+		
+# 		song["song_id"] = 29999
+# 		song["game_version"] = 29
+# 		music_db.append(song)
+# 		indices_list[29999] = header_array
+# 		header_array[2] += 1
+# 		break
+		
+
+'''
 with open("testnewdb.db", "wb") as write_file:
 	infdbt.writer_1a(write_file, music_db, 29)
-
+'''
 
 
 
@@ -97,71 +118,69 @@ with open("testnewdb.db", "wb") as write_file:
 
 
 
-'''
-with open("weirdtitles.txt", "wb") as file:
-	for song in music_db:
-		if song[0] != song[1]:
-			file.write(song[0].strip(b"\x00"))
-			file.write(b"\n")
-			file.write(song[1].strip(b"\x00"))
-			file.write(b"\n\n")
-'''
 
-
-
-'''
-song_index_dict = dbt.getEntryDict(byte_array, bc, header_array[3])
-bc += header_array[3] * 2
-'''
-
-'''
-song_index_list = dbt.getEntryList(byte_array, bc, header_array[3], raw_binary = True)
-bc += header_array[3] * 2
-'''
-
-'''
-song_array = []
-
-bc_copy = bc
-
-for i in range(header_array[2]):
-	song_array.append(byte_array[bc_copy:bc_copy + 1324])
-	bc_copy += 1324
-
-
-
-for i in range(0, 5):
-	print(dbt.stringFromArray(song_array[i], 0, 64))
+# with open("weirdtitles.txt", "wb") as file:
+# 	for song in music_db:
+# 		if song[0] != song[1]:
+# 			file.write(song[0].strip(b"\x00"))
+# 			file.write(b"\n")
+# 			file.write(song[1].strip(b"\x00"))
+# 			file.write(b"\n\n")
 
 
 
 
 
-if len(song_index_list) != header_array[2]:
-	raise ValueError("Scores in array do not match number in header.\nEntries listed in header: " + str(header_array[2]) + "\nEntries successfully found: " + len(song_index_list))
+# song_index_dict = dbt.getEntryDict(byte_array, bc, header_array[3])
+# bc += header_array[3] * 2
 
-music_db = dbt.makeDB(byte_array, bc, song_index_list)
-bc += 1324 * len(song_index_list)
+
+
+# song_index_list = dbt.getEntryList(byte_array, bc, header_array[3], raw_binary = True)
+# bc += header_array[3] * 2
+
+
+
+# song_array = []
+
+# bc_copy = bc
+
+# for i in range(header_array[2]):
+# 	song_array.append(byte_array[bc_copy:bc_copy + 1324])
+# 	bc_copy += 1324
+
+
+
+# for i in range(0, 5):
+# 	print(dbt.stringFromArray(song_array[i], 0, 64))
+
+
+
+
+
+# if len(song_index_list) != header_array[2]:
+# 	raise ValueError("Scores in array do not match number in header.\nEntries listed in header: " + str(header_array[2]) + "\nEntries successfully found: " + len(song_index_list))
+
+# music_db = dbt.makeDB(byte_array, bc, song_index_list)
+# bc += 1324 * len(song_index_list)
 
 
 #dbt.exportDBJSON(header_array, music_db)
-'''
 
-'''
-kkAlias = ["kors k", "Disconation", "StripE", "teranoid", "Eagle", "maras k", "The 4th"]
 
-for song in music_db:
-	found = False
-	for alias in kkAlias:
-		if found == False:
-			if alias.lower() in song[4].lower():
-				found = True
+# kkAlias = ["kors k", "Disconation", "StripE", "teranoid", "Eagle", "maras k", "The 4th"]
+
+# for song in music_db:
+# 	found = False
+# 	for alias in kkAlias:
+# 		if found == False:
+# 			if alias.lower() in song[4].lower():
+# 				found = True
 	
-	if (found == False):
-		continue
+# 	if (found == False):
+# 		continue
 	
-	print(song)
-'''
+# 	print(song)
 
 
 
@@ -174,13 +193,12 @@ for song in music_db:
 
 
 
-'''
-for i in range(len(music_db)):
-	if music_db[i][0] == (b"\x83\x73\x83\x41\x83\x6D\x8B\xA6\x91\x74\x8B\xC8\x91\xE6\x82\x50\x94\xD4\x81\x68\xE5\xB6\x89\xCE\x81\x68\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"):
-		music_db[i][0] = (b"Piano Concerto Op. 1 (SASORIBI)\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
-		music_db[i][0] = music_db[i][0][:64]
+
+# for i in range(len(music_db)):
+# 	if music_db[i][0] == (b"\x83\x73\x83\x41\x83\x6D\x8B\xA6\x91\x74\x8B\xC8\x91\xE6\x82\x50\x94\xD4\x81\x68\xE5\xB6\x89\xCE\x81\x68\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"):
+# 		music_db[i][0] = (b"Piano Concerto Op. 1 (SASORIBI)\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+# 		music_db[i][0] = music_db[i][0][:64]
 
 
 #dbt.exportDBBIN(header_array, indices_list, music_db, "sasori.bin", AC_HEADER_FMTSTRING, AC_CHART_FMTSTRING)
 
-'''
