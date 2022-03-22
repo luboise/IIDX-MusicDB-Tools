@@ -318,8 +318,9 @@ def writer_1a(outfile, data, version):
 
     # Write song index table
     exist_ids = {}
-    for i in range(len(data)):
-        exist_ids[data[i]['song_id']] = i
+    dk = list(data.keys())
+    for i in range(len(dk)):
+        exist_ids[data[dk[i]]['song_id']] = i
 
     cur_song = 0
     for i in range(MAX_ENTRIES):
@@ -333,7 +334,7 @@ def writer_1a(outfile, data, version):
 
     # Write song entries
     for k in sorted(exist_ids.keys()):
-        song_data = data[exist_ids[k]]
+        song_data = data[k]
 
         write_string(outfile, song_data['title'], 0x40)
         write_string(outfile, song_data['title_ascii'], 0x40)

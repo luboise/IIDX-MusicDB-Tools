@@ -67,7 +67,13 @@ infbc += inf_header_array[3] * 2
 
 merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT)
 
-dbt.makeNewOmniFiles(omni_data_folder, output_data_folder, CONVERSION_DICT)
+with open("final.db", "wb") as write_file:
+	infdbt.writer_1a(write_file, merged_db, 29)
+
+# dbt.exportDBBIN(header_array, indices_list, merged_db, "final.bin.bin", AC_HEADER_FMTSTRING, AC_CHART_FMTSTRING)
+
+
+#dbt#.makeNewOmniFiles(omni_data_folder, output_data_folder, CONVERSION_DICT)
 
 
 # for song in inf_music_db:
@@ -85,10 +91,7 @@ dbt.makeNewOmniFiles(omni_data_folder, output_data_folder, CONVERSION_DICT)
 # 		break
 		
 
-'''
-with open("testnewdb.db", "wb") as write_file:
-	infdbt.writer_1a(write_file, music_db, 29)
-'''
+
 
 
 
