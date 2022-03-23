@@ -1,4 +1,5 @@
 from json import dump as makeJSON
+from multiprocessing.sharedctypes import Value
 import struct
 from dataStores import *
 import os
@@ -531,6 +532,34 @@ def makeNewOmniFilesRec(path, merge_keys):
 		for filename in filenames:
 			replaceFileDir(dirpath, filename, merge_keys)
 
+def createDB(file_path, db_type):
+	if db_type == "AC":
+		header_fmt = AC_HEADER_FMTSTRING
+		song_fmt = AC_CHART_FMTSTRING
+	elif db_type == "INF":
+		header_fmt = INF_HEADER_FMTSTRING
+		song_fmt = INF_CHART_FMTSTRING
+	else:
+		raise ValueError("Invalid Music DB type given, AC or IIDX REQUIRED, " + str(db_type) + " given.")
+
+	bc = 0
+
+	header_array = arrayFromBinary(file_path, bc, header_fmt)
+	bc += struct.calcsize(header_fmt)
+
+	header_array = header_array[0]
+
+	fmt_string = str(header_array[3]) + "H"
+	indices_list = arrayFromBinary(file_path, bc, fmt_string)
+	indices_list = indices_list[0]
+	bc += header_array[3] * 2
+
+	song_index_list = getEntryList(indices_list, 0, header_array[3], raw_binary=False)
+
+	music_db = arrayFromBinary(file_path, bc, song_fmt, header_array[2], db_type)
+	bc += header_array[3] * 2
+
+	return header_array, song_index_list, music_db
 
 # def makeNewOmniFiles2(old_path, new_path, merge_keys):
 # 	for (dirpath, dirnames, filenames) in os.walk(cwd):

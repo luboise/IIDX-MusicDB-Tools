@@ -1,6 +1,5 @@
 import dbTools as dbt
 import musicdata_tool_inf as infdbt
-import struct
 import os
 from dataStores import CONVERSION_DICT
 
@@ -8,67 +7,81 @@ cwd = os.getcwd()
 omni_data_folder = os.path.join(cwd, "omni_data")
 output_data_folder = os.path.join(cwd, "data_output")
 db_path = "music_data.bin"
+bpl_path = "music_data_bpl.bin"
+omni_path = "music_omni.bin"
 inf_db_path = "inf_music_data.bin"
 
-AC_HEADER_FMTSTRING = "<4sIHH4x"
-#AC_CHART_FMTSTRING_ALPHA = "<64s64s64s64sIIIIIIHHHH10B10sI120sI508sI16s16s344s"
-#AC_CHART_FMTSTRING_BETA = "<64s64s64s64sIIIIIIHHHH10B646sII10cH32sI32s32s32s32s32s32s32s32s32s32s4s"
-AC_CHART_FMTSTRING = "<64s64s64s64sIIIIIIHHHH10B6s480s160sII10cH32sI32s32s32s32s32s32s32s32s32s32s4s"
-INF_HEADER_FMTSTRING = "<4sIII"
-INF_CHART_FMTSTRING = "<64s64s64s64sIIIIIIHHHH10B326sII10cH2s32s2sI32s32s32s32s32s32s32s32s32s32s4s"
 
+# header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
+header_array, song_index_list, music_db = dbt.createDB(bpl_path, "AC")
+omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
+inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
 
-bc = 0
-
-header_array = dbt.arrayFromBinary(db_path, bc, AC_HEADER_FMTSTRING)
-bc += 16
-
-header_array = header_array[0]
-
-fmt_string = str(header_array[3]) + "H"
-indices_list = dbt.arrayFromBinary(db_path, bc, fmt_string)
-indices_list = indices_list[0]
-bc += header_array[3] * 2
-
-song_index_list = dbt.getEntryList(indices_list, 0, header_array[3], raw_binary=False)
-
-
-
-fmt_string = AC_CHART_FMTSTRING
-music_db = dbt.arrayFromBinary(db_path, bc, fmt_string, header_array[2], "AC")
-bc += header_array[3] * 2
-
-
-
-
-
-
-
-infbc = 0
-
-inf_header_array = dbt.arrayFromBinary(inf_db_path, infbc, INF_HEADER_FMTSTRING)
-inf_header_array = inf_header_array[0]
-infbc += 16              #skip 4 empty bytes
-
-
-fmt_string = str(inf_header_array[3]) + "H"
-inf_indices_list = dbt.arrayFromBinary(inf_db_path, infbc, fmt_string)
-inf_indices_list = inf_indices_list[0]
-infbc += inf_header_array[3] * 2
-
-song_index_list = dbt.getEntryList(inf_indices_list, 0, inf_header_array[3], raw_binary=False)
-
-
-fmt_string = INF_CHART_FMTSTRING
-inf_music_db = dbt.arrayFromBinary(inf_db_path, infbc, fmt_string, inf_header_array[2], "INF")
-infbc += inf_header_array[3] * 2
-
-
-
-
-
+#music_db = dbt.mergeDBs(music_db, omni_music_db, CONVERSION_DICT, strip_only_inf = False)
 music_db = dbt.changeVers(music_db, 1, 0)
 merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT, strip_only_inf = True, custom_version = 1)
+
+with open("music_omni 1117 (INF only).bin", "wb") as write_file:
+	infdbt.writer_1a(write_file, merged_db, 29)
+
+# omni_files = os.path.join(omni_data_folder, "data")
+# dbt.makeNewOmniFilesRec(omni_files, merge_keys = CONVERSION_DICT)
+
+
+
+
+
+
+
+
+# bc = 0
+
+# header_array = dbt.arrayFromBinary(db_path, bc, AC_HEADER_FMTSTRING)
+# bc += 16
+
+# header_array = header_array[0]
+
+# fmt_string = str(header_array[3]) + "H"
+# indices_list = dbt.arrayFromBinary(db_path, bc, fmt_string)
+# indices_list = indices_list[0]
+# bc += header_array[3] * 2
+
+# song_index_list = dbt.getEntryList(indices_list, 0, header_array[3], raw_binary=False)
+
+
+
+# fmt_string = AC_CHART_FMTSTRING
+# music_db = dbt.arrayFromBinary(db_path, bc, fmt_string, header_array[2], "AC")
+# bc += header_array[3] * 2
+
+
+
+
+
+
+# infbc = 0
+
+# inf_header_array = dbt.arrayFromBinary(inf_db_path, infbc, INF_HEADER_FMTSTRING)
+# inf_header_array = inf_header_array[0]
+# infbc += 16              #skip 4 empty bytes
+
+
+# fmt_string = str(inf_header_array[3]) + "H"
+# inf_indices_list = dbt.arrayFromBinary(inf_db_path, infbc, fmt_string)
+# inf_indices_list = inf_indices_list[0]
+# infbc += inf_header_array[3] * 2
+
+# song_index_list = dbt.getEntryList(inf_indices_list, 0, inf_header_array[3], raw_binary=False)
+
+
+# fmt_string = INF_CHART_FMTSTRING
+# inf_music_db = dbt.arrayFromBinary(inf_db_path, infbc, fmt_string, inf_header_array[2], "INF")
+# infbc += inf_header_array[3] * 2
+
+
+
+
+
 
 
 
@@ -83,8 +96,7 @@ merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT, strip_only_inf
 
 
 
-with open("final.bin", "wb") as write_file:
-	infdbt.writer_1a(write_file, merged_db, 29)
+
 
 # dbt.exportDBBIN(header_array, indices_list, merged_db, "final.bin.bin", AC_HEADER_FMTSTRING, AC_CHART_FMTSTRING)
 
