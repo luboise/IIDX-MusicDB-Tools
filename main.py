@@ -12,8 +12,8 @@ omni_path = "music_omni.bin"
 inf_db_path = "inf_music_data.bin"
 
 
-# header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
-header_array, song_index_list, music_db = dbt.createDB(bpl_path, "AC")
+header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
+# header_array, song_index_list, music_db = dbt.createDB(bpl_path, "AC")
 omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
 inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
 
@@ -21,7 +21,7 @@ inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, 
 music_db = dbt.changeVers(music_db, 1, 0)
 merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT, strip_only_inf = True, custom_version = 1)
 
-with open("music_omni 1117 (INF only).bin", "wb") as write_file:
+with open("out.bin", "wb") as write_file:
 	infdbt.writer_1a(write_file, merged_db, 29)
 
 # omni_files = os.path.join(omni_data_folder, "data")
