@@ -318,6 +318,7 @@ def writer_1a(outfile, data, version):
 
     # Write song index table
     exist_ids = {}
+                              
     dk = list(data.keys())
     for i in range(len(dk)):
         exist_ids[data[dk[i]]['song_id']] = i

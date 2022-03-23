@@ -59,15 +59,31 @@ infbc += inf_header_array[3] * 2
 song_index_list = dbt.getEntryList(inf_indices_list, 0, inf_header_array[3], raw_binary=False)
 
 
-
 fmt_string = INF_CHART_FMTSTRING
 inf_music_db = dbt.arrayFromBinary(inf_db_path, infbc, fmt_string, inf_header_array[2], "INF")
 infbc += inf_header_array[3] * 2
 
 
-merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT)
 
-with open("final.db", "wb") as write_file:
+
+
+music_db = dbt.changeVers(music_db, 1, 0)
+merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT, strip_only_inf = True, custom_version = 1)
+
+
+
+
+
+# data_path = "D:\\Python Projects\\IIDX MusicDB Tools\\omni_data\\data"
+# dbt.makeNewOmniFilesRec(data_path, CONVERSION_DICT)
+
+
+
+
+
+
+
+with open("final.bin", "wb") as write_file:
 	infdbt.writer_1a(write_file, merged_db, 29)
 
 # dbt.exportDBBIN(header_array, indices_list, merged_db, "final.bin.bin", AC_HEADER_FMTSTRING, AC_CHART_FMTSTRING)

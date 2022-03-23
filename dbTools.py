@@ -395,9 +395,20 @@ def encodeToBinary(in_string, length, fill = "\0"):
 	return encoded_string
 
 
-def changeID(entry, new_ID):
+def changeID(entry, new_ID, new_version = -1):
 	entry["song_id"] = new_ID
-	entry["bga_filename"] = encodeToBinary(str(new_ID), 32)
+
+	bga_filename = entry["bga_filename"].decode(encoding = "cp932").strip("\0")
+	found_int = findIntInString(bga_filename, length = 5)
+	if found_int != None:
+		entry["bga_filename"] = encodeToBinary(str(new_ID), 32)
+
+	
+
+	if new_version == -1:
+		entry["game_version"] = new_ID // 1000
+	else:
+		entry["game_version"] = new_version
 
 	return entry
 
@@ -413,14 +424,16 @@ def listDictInsert(main_list, new_element, attribute = "song_id"):
 	return main_list
 
 
-def mergeDBs(db_main, db_sub, merge_keys = {}):
+def mergeDBs(db_main, db_sub, merge_keys = {}, strip_only_inf = False, custom_version = -1):
 	for song_key in db_sub:         #Each song in new db
-		if song_key in db_main:
+		if (song_key in db_main) or (strip_only_inf and song_key < 80000):
 			continue
 
 		if song_key in merge_keys:
 			new_ID = merge_keys[song_key]
-			new_entry = changeID(db_sub[song_key], new_ID)
+			if new_ID in db_main:
+				continue      #want to skip merged songs that are already in the DB (for example, rejection girl is already in bistrover data)
+			new_entry = changeID(db_sub[song_key], new_ID, custom_version)
 		else:
 			new_entry = db_sub[song_key]
 
@@ -428,31 +441,136 @@ def mergeDBs(db_main, db_sub, merge_keys = {}):
 	
 	return db_main
 
-def makeNewOmniFiles(old_path, new_path, merge_keys):
-	old_data = os.path.join(old_path, "data")
-	old_sound = os.path.join(old_data, "sound")
-	old_previews = os.path.join(old_sound, "preview")
+# def normStr(string, index):
+# 	if index > len(string) - 1:
+# 		return ""
+# 	else:
+# 		return string[index:]
 
-	new_data = os.path.join(new_path, "data")
-	new_sound = os.path.join(new_data, "sound")
-	new_previews = os.path.join(new_sound, "preview")
+def findIntInString(string, length = 5):
+	if len(string) < length:
+		return None
+	
+	for i in range(len(string) - length + 1):
+		splice = string[i:i+length]
+		if isInt(splice):
+			return splice
 
-	for (dirpath, dirnames, filenames) in os.walk(old_previews):
+	return None
+
+def replaceFileDir(base_dir, filename, merge_keys):
+	song_id = findIntInString(filename)
+
+	if song_id == None:
+		return False
+
+	if int(song_id) in merge_keys:
+		new_id = str(merge_keys[int(song_id)])
+
+		if song_id == new_id:
+			return False
+
+		old_path = os.path.join(base_dir, filename)
+		new_path = os.path.join(base_dir, filename.replace(song_id, new_id))
+		os.rename(old_path, new_path)
+
+		return True
+	else:
+		return False
+
+def extractPreviews(base_path):
+	previews_path = os.path.join(base_path, "preview")
+
+	base_dirs = os.listdir(base_path)
+	base_dirs.remove("preview")
+
+	for dir in base_dirs:
+		if not os.path.isdir(os.path.join(base_path, dir)):
+			base_dirs.remove(dir)
+	
+
+	for (dirpath, dirnames, filenames) in os.walk(previews_path):
 		for filename in filenames:
-			id = filename[:5]
-			if int(id) in merge_keys:
-				new_id = str(merge_keys[int(id)])
+
+			preview_id = findIntInString(filename)
+
+			if preview_id != None:
+				old_path = os.path.join(dirpath, filename)
+				if preview_id in base_dirs:
+					new_path = os.path.join(base_path, preview_id)
+					new_path = os.path.join(new_path, filename)
+				else:
+					new_path = os.path.join(base_path, filename)
+
+				shutil.copyfile(old_path, new_path)
+
 			else:
-				new_id = id
+				continue
+	
+	if len(os.listdir(previews_path)) == 0:
+		os.remove(previews_path)
 
-			old_path = os.path.join(old_previews, filename)
-			folder_path = os.path.join(new_sound, new_id)
-			new_path = os.path.join(folder_path, new_id + "_pre.2dx")
+def changeVers(music_db, old_ver, new_ver):
+	for key in music_db:
+		if music_db[key]["game_version"] == old_ver:
+			music_db[key]["game_version"] = new_ver
+	
+	return music_db
 
-			if not os.path.exists(folder_path):
-				os.makedirs(folder_path)
+def makeNewOmniFilesRec(path, merge_keys):
+	for (dirpath, dirnames, filenames) in os.walk(path):
+		for dirname in dirnames:
+			makeNewOmniFilesRec(os.path.join(dirpath, dirname), merge_keys)
+			replaceFileDir(dirpath, dirname, merge_keys)
+
+		if os.path.exists(os.path.join(dirpath, "preview")):
+			extractPreviews(dirpath)
+
+
 			
-			if not os.path.exists(new_path):
-				shutil.copy(old_path, new_path)
+		for filename in filenames:
+			replaceFileDir(dirpath, filename, merge_keys)
+
+
+# def makeNewOmniFiles2(old_path, new_path, merge_keys):
+# 	for (dirpath, dirnames, filenames) in os.walk(cwd):
+# 		for dirname in dirnames:
+# 			if dirname.startswith("8"):
+# 				new_id = str(int(dirname) - 50,500)
+# 				inside_dir = os.path.join(dirpath, dirname)
+# 				for (x, y, infilenames) in os.walk(inside_dir):
+# 					for infile in infilenames:
+# 						if not infile.startswith("8"):
+# 							old_path = os.path.join(inside_dir, infile)
+# 							new_path = os.path.join(inside_dir, new_id + infile[5:])
+# 							os.rename(old_path, new_path)
+
+
+# def makeNewOmniFiles(old_path, new_path, merge_keys):
+# 	old_data = os.path.join(old_path, "data")
+# 	old_sound = os.path.join(old_data, "sound")
+# 	old_previews = os.path.join(old_sound, "preview")
+
+# 	new_data = os.path.join(new_path, "data")
+# 	new_sound = os.path.join(new_data, "sound")
+# 	new_previews = os.path.join(new_sound, "preview")
+
+# 	for (dirpath, dirnames, filenames) in os.walk(old_previews):
+# 		for filename in filenames:
+# 			id = filename[:5]
+# 			if int(id) in merge_keys:
+# 				new_id = str(merge_keys[int(id)])
+# 			else:
+# 				new_id = id
+
+# 			old_path = os.path.join(old_previews, filename)
+# 			folder_path = os.path.join(new_sound, new_id)
+# 			new_path = os.path.join(folder_path, new_id + "_pre.2dx")
+
+# 			if not os.path.exists(folder_path):
+# 				os.makedirs(folder_path)
+			
+# 			if not os.path.exists(new_path):
+# 				shutil.copy(old_path, new_path)
 
 	
