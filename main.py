@@ -17,7 +17,7 @@ header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
 omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
 inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
 
-#music_db = dbt.mergeDBs(music_db, omni_music_db, CONVERSION_DICT, strip_only_inf = False)
+music_db = dbt.mergeDBs(music_db, omni_music_db, CONVERSION_DICT, strip_only_inf = False)
 music_db = dbt.changeVers(music_db, 1, 0)
 merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT, strip_only_inf = True, custom_version = 1)
 

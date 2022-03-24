@@ -424,22 +424,53 @@ def listDictInsert(main_list, new_element, attribute = "song_id"):
 	print("\n")
 	return main_list
 
+def makeDiffList(song):
+	return_list = []
 
-def mergeDBs(db_main, db_sub, merge_keys = {}, strip_only_inf = False, custom_version = -1):
+
+
+	for diff in SONG_POSSIBLE_DIFFS:
+		return_list.append(song[diff])
+	
+	return return_list
+
+def mergeDiffs(entry, main_diffs, sub_diffs):
+	for i in range(10):
+		if main_diffs[i] == 0:
+			if sub_diffs[i] != 0:
+				entry[SONG_POSSIBLE_DIFFS[i]] = sub_diffs[i]
+	
+	return entry
+
+
+def mergeDBs(db_main, db_sub, merge_keys = {}, strip_only_inf = False, custom_version = -1, merge_diffs = True):
 	for song_key in db_sub:         #Each song in new db
-		if (song_key in db_main) or (strip_only_inf and song_key < 80000):
+		if (strip_only_inf and song_key < 80000):
 			continue
-
+		
 		if song_key in merge_keys:
 			new_ID = merge_keys[song_key]
-			if new_ID in db_main:
-				continue      #want to skip merged songs that are already in the DB (for example, rejection girl is already in bistrover data)
 			new_entry = changeID(db_sub[song_key], new_ID, custom_version)
 		else:
+			new_ID = song_key
 			new_entry = db_sub[song_key]
+		
+		if new_ID in db_main:
+			if not merge_diffs:
+				continue
 
-		db_main[new_entry["song_id"]] = new_entry
-	
+			old_diffs = makeDiffList(db_main[new_ID])
+			new_diffs = makeDiffList(db_sub[song_key])
+
+			if new_diffs != old_diffs:
+				new_entry = mergeDiffs(db_main[song_key], old_diffs, new_diffs)
+				db_main[song_key] = new_entry
+			else:
+				continue
+		
+		else:
+			db_main[new_entry["song_id"]] = new_entry
+
 	return db_main
 
 # def normStr(string, index):
@@ -527,8 +558,6 @@ def makeNewOmniFilesRec(path, merge_keys):
 		if os.path.exists(os.path.join(dirpath, "preview")):
 			extractPreviews(dirpath)
 
-
-			
 		for filename in filenames:
 			replaceFileDir(dirpath, filename, merge_keys)
 
