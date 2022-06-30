@@ -1,5 +1,7 @@
-music_data.bin
 __pycache__/
+bins/
+
+music_data.bin
 db.json
 music_data (modified).bin
 weirdtitles.txt
