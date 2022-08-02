@@ -37,7 +37,7 @@ change_all_versions = True
 
 
 # Strip diffs below top difficulty (keeps both another and legg if both exist)
-strip_lower_diffs = True
+strip_lower_diffs = False
 
 # If above is true, choose which gamemodes are affected
 strip_sp = True
