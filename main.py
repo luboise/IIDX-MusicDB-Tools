@@ -59,23 +59,22 @@ output_data_folder = os.path.join(cwd, "data_output")
 
 if db_path != None:
 	header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
-if omni_path != None:
-	omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
-if inf_db_path != None:
-	inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
 
 if omni_path != None:
+	omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
+	
 	if use_custom_folder and change_all_versions:
 		music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
 	
 	music_db = dbt.mergeDBs(music_db, omni_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
-	
+
 if inf_db_path != None:
+	inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
+
 	if use_custom_folder:
 		music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
 
 	music_db = dbt.mergeDBs(music_db, inf_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
-
 
 if strip_lower_diffs:
 	dbt.strip_lower(music_db)
