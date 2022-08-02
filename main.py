@@ -3,32 +3,85 @@ import musicdata_tool_inf as infdbt
 import os
 from dataStores import CONVERSION_DICT
 
+# USAGE SETTINGS              CHANGE YOUR SETTINGS HERE
+
+#version of DB being output
+game_version = 29
+
+# Choose bin filenames here (put None to skip any)
+
+# Enter a clean .bin here from IIDX
+db_path = "music_data_0620.bin"
+
+# Enter an omnimix bin here
+omni_path = "CH 0509+omni+inf.bin"
+
+# Enter an infinitas bin here
+inf_db_path = "inf_music_data.bin"
+
+
+
+# Custom folder for merged songs  (enter game version 0-29, 0 for 1st style, 1 for substream, 29 for CH etc etc)
+use_custom_folder = True
+
+# Enter -1 to skip this feature
+custom_inf_folder = 1
+# Move songs out of custom infinitas folder before putting them in (same input as above)
+move_orig_folder_to = 0
+# Decides whether to relocate the omni db or JUST the inf db
+change_all_versions = True
+
+
+strip_lower_diffs = False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# PROGRAM STARTS HERE
+
+
+
 cwd = os.getcwd()
 omni_data_folder = os.path.join(cwd, "omni_data")
 output_data_folder = os.path.join(cwd, "data_output")
 
-db_path = "music_data_0620.bin"
-#bpl_path = "music_data_bpl.bin"
-omni_path = "stikam_omni_v1-1.bin"
-inf_db_path = "inf_music_data.bin"
-
-header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
-#header_array, song_index_list, music_db = dbt.createDB(bpl_path, "AC")
-#header_array, song_index_list, music_db = dbt.createDB(secret_path, "AC")
-
-omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
-inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
-
-music_db = dbt.mergeDBs(music_db, omni_music_db, merge_keys = CONVERSION_DICT, strip_only_inf=False)
-#music_db = dbt.changeVers(music_db, 1, 0)
-
-#merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT, strip_only_inf = True, custom_version = 1)
 
 
-merged_db = music_db
+if db_path != None:
+	header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
+if omni_path != None:
+	omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
+if inf_db_path != None:
+	inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
 
-with open("music_omni (0620 nojubeat).bin", "wb") as write_file:
-	infdbt.writer_1a(write_file, merged_db, 29)
+if omni_path != None:
+	if use_custom_folder and change_all_versions:
+		music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
+	
+	music_db = dbt.mergeDBs(music_db, omni_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
+	
+if inf_db_path != None:
+	if use_custom_folder:
+		music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
+
+	music_db = dbt.mergeDBs(music_db, inf_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
+
+
+if strip_lower_diffs:
+	dbt.strip_lower(music_db)
+
+with open("out.bin", "wb") as write_file:
+	infdbt.writer_1a(write_file, music_db, game_version)
 
 # omni_files = os.path.join(omni_data_folder, "data")
 # dbt.makeNewOmniFilesRec(omni_files, merge_keys = CONVERSION_DICT)

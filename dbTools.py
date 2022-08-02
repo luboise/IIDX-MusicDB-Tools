@@ -473,6 +473,50 @@ def mergeDBs(db_main, db_sub, merge_keys = {}, strip_only_inf = False, custom_ve
 
 	return db_main
 
+
+def stripLowers(music_db, strip_sp = True, strip_dp = True):
+	for song_key in music_db:
+		song = music_db[song_key]
+		diffs = makeDiffList(song)
+		new_diffs = diffs[:]
+
+
+
+
+		max_sp = None
+		for i in reversed(range(5)):
+			if diffs[i] != 0:
+				max_sp = i
+		
+		if max_sp != None:
+			if max_sp >= 3:
+				for i in range(3):
+					diffs[i] = 0
+			else:
+				for i in range(max_sp):
+					diffs[i] = 0
+		
+
+
+
+		max_dp = None
+		for i in reversed(range(0 + 5, 5 + 5)):
+			if diffs[i] != 0:
+				max_dp = i
+		
+		if max_dp != None:
+			if max_dp >= 3 + 5:
+				for i in range(0 + 5, 3 + 5):
+					diffs[i] = 0
+			else:
+				for i in range(0 + 5, max_dp):
+					diffs[i] = 0
+		
+		if diffs != new_diffs:
+			for i in range(len(SONG_POSSIBLE_DIFFS)):
+				song[SONG_POSSIBLE_DIFFS[i]] = new_diffs[i]
+		
+
 # def normStr(string, index):
 # 	if index > len(string) - 1:
 # 		return ""
@@ -589,6 +633,7 @@ def createDB(file_path, db_type):
 	bc += header_array[3] * 2
 
 	return header_array, song_index_list, music_db
+
 
 # def makeNewOmniFiles2(old_path, new_path, merge_keys):
 # 	for (dirpath, dirnames, filenames) in os.walk(cwd):
