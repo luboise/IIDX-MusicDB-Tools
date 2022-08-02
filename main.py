@@ -5,12 +5,6 @@ from dataStores import CONVERSION_DICT
 
 # USAGE SETTINGS              CHANGE YOUR SETTINGS HERE
 
-
-dbt.makeNewOmniFilesRec("junkus", CONVERSION_DICT)
-
-print("Finished")
-input()
-
 #version of DB being output
 game_version = 29
 OUTPUT_FILENAME = "out.bin"
