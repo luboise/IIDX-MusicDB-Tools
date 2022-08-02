@@ -9,7 +9,7 @@ output_data_folder = os.path.join(cwd, "data_output")
 
 db_path = "music_data_0620.bin"
 #bpl_path = "music_data_bpl.bin"
-omni_path = "CH 0509+omni+inf.bin"
+omni_path = "stikam_omni_v1-1.bin"
 inf_db_path = "inf_music_data.bin"
 
 header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
@@ -19,12 +19,15 @@ header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
 omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
 inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
 
-# music_db = dbt.mergeDBs(music_db, omni_music_db, CONVERSION_DICT, strip_only_inf = False)
-music_db = dbt.changeVers(music_db, 1, 0)
 music_db = dbt.mergeDBs(music_db, omni_music_db, merge_keys = CONVERSION_DICT, strip_only_inf=False)
-merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT, strip_only_inf = True, custom_version = 1)
+#music_db = dbt.changeVers(music_db, 1, 0)
 
-with open("out.bin", "wb") as write_file:
+#merged_db = dbt.mergeDBs(music_db, inf_music_db, CONVERSION_DICT, strip_only_inf = True, custom_version = 1)
+
+
+merged_db = music_db
+
+with open("music_omni (0620 nojubeat).bin", "wb") as write_file:
 	infdbt.writer_1a(write_file, merged_db, 29)
 
 # omni_files = os.path.join(omni_data_folder, "data")

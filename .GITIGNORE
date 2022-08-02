@@ -1,18 +1,9 @@
 __pycache__/
 bins/
 
-music_data.bin
+
 db.json
-music_data (modified).bin
 weirdtitles.txt
-inf_music_data.bin
-sasori.bin
-testnewdb.db
-thefunnydata.bin
 omni_data/
 data_output/
-final.bin
-music_omni.bin
-final_omni_bpl.bin
-out.bin
-nova.bin
+*.bin
