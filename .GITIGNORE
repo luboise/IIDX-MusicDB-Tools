@@ -6,4 +6,6 @@ db.json
 weirdtitles.txt
 omni_data/
 data_output/
+
 *.bin
+*.csv
