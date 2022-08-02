@@ -5,8 +5,16 @@ from dataStores import CONVERSION_DICT
 
 # USAGE SETTINGS              CHANGE YOUR SETTINGS HERE
 
+
+dbt.makeNewOmniFilesRec("junkus", CONVERSION_DICT)
+
+print("Finished")
+input()
+
 #version of DB being output
 game_version = 29
+OUTPUT_FILENAME = "out.bin"
+
 
 # Choose bin filenames here (put None to skip any)
 
@@ -14,10 +22,12 @@ game_version = 29
 db_path = "music_data_0620.bin"
 
 # Enter an omnimix bin here
-omni_path = "CH 0509+omni+inf.bin"
+omni_path = "ch_v1.1.bin"
 
 # Enter an infinitas bin here
-inf_db_path = "inf_music_data.bin"
+inf_db_path = "inf-20220727.bin"
+
+
 
 
 
@@ -32,7 +42,12 @@ move_orig_folder_to = 0
 change_all_versions = True
 
 
-strip_lower_diffs = False
+# Strip diffs below top difficulty (keeps both another and legg if both exist)
+strip_lower_diffs = True
+
+# If above is true, choose which gamemodes are affected
+strip_sp = True
+strip_dp = False
 
 
 
@@ -76,10 +91,10 @@ if inf_db_path != None:
 
 	music_db = dbt.mergeDBs(music_db, inf_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
 
-if strip_lower_diffs:
-	dbt.strip_lower(music_db)
+if strip_lower_diffs and (strip_sp or strip_dp):
+	dbt.stripLowers(music_db, strip_sp = strip_sp, strip_dp = strip_dp)
 
-with open("out.bin", "wb") as write_file:
+with open(OUTPUT_FILENAME, "wb") as write_file:
 	infdbt.writer_1a(write_file, music_db, game_version)
 
 # omni_files = os.path.join(omni_data_folder, "data")

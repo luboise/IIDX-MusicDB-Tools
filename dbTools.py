@@ -482,35 +482,37 @@ def stripLowers(music_db, strip_sp = True, strip_dp = True):
 
 
 
+		if strip_sp:
+			max_sp = None
+			for i in reversed(range(5)):
+				if diffs[i] != 0:
+					max_sp = i
+					break
+			
+			if max_sp != None:
+				if max_sp >= 3:
+					for i in range(3):
+						new_diffs[i] = 0
+				else:
+					for i in range(max_sp):
+						new_diffs[i] = 0
+			
 
-		max_sp = None
-		for i in reversed(range(5)):
-			if diffs[i] != 0:
-				max_sp = i
-		
-		if max_sp != None:
-			if max_sp >= 3:
-				for i in range(3):
-					diffs[i] = 0
-			else:
-				for i in range(max_sp):
-					diffs[i] = 0
-		
 
-
-
-		max_dp = None
-		for i in reversed(range(0 + 5, 5 + 5)):
-			if diffs[i] != 0:
-				max_dp = i
-		
-		if max_dp != None:
-			if max_dp >= 3 + 5:
-				for i in range(0 + 5, 3 + 5):
-					diffs[i] = 0
-			else:
-				for i in range(0 + 5, max_dp):
-					diffs[i] = 0
+		if strip_dp:
+			max_dp = None
+			for i in reversed(range(0 + 5, 5 + 5)):
+				if diffs[i] != 0:
+					max_dp = i
+					break
+			
+			if max_dp != None:
+				if max_dp >= 3 + 5:
+					for i in range(0 + 5, 3 + 5):
+						new_diffs[i] = 0
+				else:
+					for i in range(0 + 5, max_dp):
+						diffs[i] = 0
 		
 		if diffs != new_diffs:
 			for i in range(len(SONG_POSSIBLE_DIFFS)):
