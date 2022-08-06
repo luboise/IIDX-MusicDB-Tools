@@ -7,7 +7,7 @@ from dataStores import CONVERSION_DICT
 
 #version of DB being output
 game_version = 29
-OUTPUT_FILENAME = "out.bin"
+OUTPUT_FILENAME = "working.bin"
 
 
 # Choose bin filenames here (put None to skip any)
@@ -37,11 +37,13 @@ change_all_versions = True
 
 
 # Strip diffs below top difficulty (keeps both another and legg if both exist)
-strip_lower_diffs = False
+strip_lower_diffs = True
 
-# If above is true, choose which gamemodes are affected
-strip_sp = True
-strip_dp = False
+# Choose the max difficulty for removable difficulties
+# (eg. using 10 means that 11s and 12s wont be removed)
+# Use 0 to leave a gamemode unaffected
+remove_sp = 10
+remove_dp = 0
 
 
 
@@ -57,39 +59,37 @@ strip_dp = False
 
 
 # PROGRAM STARTS HERE
+if __name__ == "__main__":
+	cwd = os.getcwd()
+	omni_data_folder = os.path.join(cwd, "omni_data")
+	output_data_folder = os.path.join(cwd, "data_output")
 
 
 
-cwd = os.getcwd()
-omni_data_folder = os.path.join(cwd, "omni_data")
-output_data_folder = os.path.join(cwd, "data_output")
+	if db_path != None:
+		header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
 
+	if omni_path != None:
+		omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
+		
+		if use_custom_folder and change_all_versions:
+			music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
+		
+		music_db = dbt.mergeDBs(music_db, omni_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
 
+	if inf_db_path != None:
+		inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
 
-if db_path != None:
-	header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
+		if use_custom_folder:
+			music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
 
-if omni_path != None:
-	omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
-	
-	if use_custom_folder and change_all_versions:
-		music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
-	
-	music_db = dbt.mergeDBs(music_db, omni_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
+		music_db = dbt.mergeDBs(music_db, inf_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
 
-if inf_db_path != None:
-	inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
+	if strip_lower_diffs:
+		dbt.stripLowers(music_db, max_removable_sp = remove_sp, max_removable_dp = remove_dp)
 
-	if use_custom_folder:
-		music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
-
-	music_db = dbt.mergeDBs(music_db, inf_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
-
-if strip_lower_diffs and (strip_sp or strip_dp):
-	dbt.stripLowers(music_db, strip_sp = strip_sp, strip_dp = strip_dp)
-
-with open(OUTPUT_FILENAME, "wb") as write_file:
-	infdbt.writer_1a(write_file, music_db, game_version)
+	with open(OUTPUT_FILENAME, "wb") as write_file:
+		infdbt.writer_1a(write_file, music_db, game_version)
 
 # omni_files = os.path.join(omni_data_folder, "data")
 # dbt.makeNewOmniFilesRec(omni_files, merge_keys = CONVERSION_DICT)

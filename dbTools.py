@@ -474,15 +474,20 @@ def mergeDBs(db_main, db_sub, merge_keys = {}, strip_only_inf = False, custom_ve
 	return db_main
 
 
-def stripLowers(music_db, strip_sp = True, strip_dp = True):
+def stripLowers(music_db, max_removable_sp = 12, max_removable_dp = 12):
+	if not (max_removable_sp in range(1, 13) or max_removable_dp in range(1, 13)):
+		print(f"No songs are removable.\nSP: {max_removable_sp}\nDP: {max_removable_dp}")
+		return
+
 	for song_key in music_db:
 		song = music_db[song_key]
 		diffs = makeDiffList(song)
 		new_diffs = diffs[:]
 
+		if diffs[2] == 12:
+			found = True
 
-
-		if strip_sp:
+		if max_removable_sp in range(1, 13):
 			max_sp = None
 			for i in reversed(range(5)):
 				if diffs[i] != 0:
@@ -490,16 +495,13 @@ def stripLowers(music_db, strip_sp = True, strip_dp = True):
 					break
 			
 			if max_sp != None:
-				if max_sp >= 3:
-					for i in range(3):
-						new_diffs[i] = 0
-				else:
-					for i in range(max_sp):
-						new_diffs[i] = 0
-			
+				# Ensures the legg and another are both kept
+				for i in range(3 if (max_sp >= 3) else max_sp):
+					if diffs[i] <= max_removable_sp:
+						new_diffs[i] = 0			
 
 
-		if strip_dp:
+		if max_removable_dp in range(1, 13):
 			max_dp = None
 			for i in reversed(range(0 + 5, 5 + 5)):
 				if diffs[i] != 0:
@@ -508,15 +510,14 @@ def stripLowers(music_db, strip_sp = True, strip_dp = True):
 			
 			if max_dp != None:
 				if max_dp >= 3 + 5:
-					for i in range(0 + 5, 3 + 5):
-						new_diffs[i] = 0
-				else:
-					for i in range(0 + 5, max_dp):
-						diffs[i] = 0
+					for i in range(0 + 5, (3 + 5) if (max_dp >= 3 + 5) else max_dp):
+						if diffs[i] <= max_removable_dp:
+							new_diffs[i] = 0
 		
 		if diffs != new_diffs:
 			for i in range(len(SONG_POSSIBLE_DIFFS)):
 				song[SONG_POSSIBLE_DIFFS[i]] = new_diffs[i]
+
 		
 
 # def normStr(string, index):
