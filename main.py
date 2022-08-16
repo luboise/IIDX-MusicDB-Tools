@@ -47,7 +47,12 @@ remove_dp = 0
 
 
 
-
+#remove charts based on your lamp
+#limits are 0 NP, 1 F, 2 AC, 3 EC, 4 NC, 5 HC, 6 EX, 7 FC
+#EG using 5 will remove all charts you lack a HC on
+fervi_scorepath = "scores.json"
+lamp_limit_sp = 5
+lamp_limit_dp = 0
 
 
 
@@ -87,6 +92,10 @@ if __name__ == "__main__":
 
 	if strip_lower_diffs:
 		dbt.stripLowers(music_db, max_removable_sp = remove_sp, max_removable_dp = remove_dp)
+
+	if fervi_scorepath is not None and (lamp_limit_sp > 0 or lamp_limit_dp > 0):
+		dbt.filterByLamps(music_db, filepath = fervi_scorepath, sp_limit = lamp_limit_sp, dp_limit = lamp_limit_dp)
+
 
 	with open(OUTPUT_FILENAME, "wb") as write_file:
 		infdbt.writer_1a(write_file, music_db, game_version)

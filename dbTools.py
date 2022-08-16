@@ -1,4 +1,5 @@
 from json import dump as makeJSON
+from json import load as getJSON
 from multiprocessing.sharedctypes import Value
 import struct
 from dataStores import *
@@ -636,6 +637,23 @@ def createDB(file_path, db_type):
 	bc += header_array[3] * 2
 
 	return header_array, song_index_list, music_db
+
+
+def filterByLamps(music_db, filepath, sp_limit, dp_limit):
+	try:
+		with open(filepath, "r") as file:
+			scores_db = getJSON(file)
+	except Exception as e:
+		print(f"Unable to open {filepath}. Exception printed below.")
+		print(e.message)
+		return
+	
+	#remove non song IDS
+	for key in scores_db:
+		if not isInt(key):
+			scores_db.pop(key)
+	
+
 
 
 # def makeNewOmniFiles2(old_path, new_path, merge_keys):
