@@ -10,3 +10,5 @@ data_output/
 *.bin
 *.csv
 zips/
+
+just_inf/

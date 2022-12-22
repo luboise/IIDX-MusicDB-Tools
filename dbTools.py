@@ -5,6 +5,8 @@ import struct
 from dataStores import *
 import os
 import shutil
+
+from ifstools import IFS
 #from locale import format_string
 #from multiprocessing.sharedctypes import Value
 
@@ -538,10 +540,42 @@ def findIntInString(string, length = 5):
 
 	return None
 
-def replaceFileDir(base_dir, filename, merge_keys):
+def getIFSFilesInFolder(base_folder):
+	for (dirpath, dirnames, filenames) in os.walk(base_folder):
+		return [filename for filename in filenames if filename.endswith(".ifs")]
+		# for filename in filenames:
+		# 	if filename.endswith(".ifs"):
+		# 		return True
+
+def fixFilenames(base_folder, merge_keys, GAME_VERSION):
+	for (dirpath, dirnames, filenames) in os.walk(base_folder):
+		for filename in filenames:
+			replaceFileDir(dirpath, filename, merge_keys, GAME_VERSION)
+
+
+def cleanExtractIFS(base_folder, merge_keys, GAME_VERSION, inplace = True):
+	while len(getIFSFilesInFolder(base_folder)) > 0:
+		IFS_list = getIFSFilesInFolder(base_folder)
+		for filename in IFS_list:
+			if filename.endswith(".ifs"):
+				ifs_filepath = os.path.join(base_folder, filename)
+
+				current_IFS = IFS(ifs_filepath)
+				current_IFS.extract(path = base_folder)
+				current_IFS.close()
+
+				os.remove(ifs_filepath)
+	
+	fixFilenames(base_folder, merge_keys, GAME_VERSION)
+
+
+
+
+
+def replaceFileDir(base_dir, filename, merge_keys, GAME_VERSION):
 	song_id = findIntInString(filename)
 
-	if song_id == None:
+	if song_id is None:
 		return False
 
 	if int(song_id) in merge_keys:
@@ -551,22 +585,40 @@ def replaceFileDir(base_dir, filename, merge_keys):
 			return False
 
 		old_path = os.path.join(base_dir, filename)
-		new_path = os.path.join(base_dir, filename.replace(song_id, new_id))
-		os.rename(old_path, new_path)
+
+		FILE_IS_IFS = GAME_VERSION >= 30 and os.path.isfile(old_path) and old_path.endswith(".ifs") and os.path.basename(base_dir) == "sound"
+
+		if FILE_IS_IFS:		
+			new_path = os.path.join(base_dir, new_id)
+			if not os.path.exists(new_path):
+				os.mkdir(new_path)
+		else:
+			new_path = base_dir
+		
+		new_path = os.path.join(new_path, filename.replace(song_id, new_id))
+
+		if FILE_IS_IFS:
+			shutil.copy(old_path, new_path)
+			#shutil.move(old_path, new_path)
+			cleanExtractIFS(os.path.split(new_path)[0], merge_keys, GAME_VERSION)
+		else:
+			os.rename(old_path, new_path)
 
 		return True
 	else:
 		return False
 
-def extractPreviews(base_path):
+
+# base_path contains a folder called preview
+def extractPreviews(base_path, GAME_VERSION):
 	previews_path = os.path.join(base_path, "preview")
 
 	base_dirs = os.listdir(base_path)
 	base_dirs.remove("preview")
 
-	for dir in base_dirs:
-		if not os.path.isdir(os.path.join(base_path, dir)):
-			base_dirs.remove(dir)
+	for directory in base_dirs:
+		if not os.path.isdir(os.path.join(base_path, directory)):
+			base_dirs.remove(directory)
 	
 
 	for (dirpath, dirnames, filenames) in os.walk(previews_path):
@@ -576,8 +628,12 @@ def extractPreviews(base_path):
 
 			if preview_id != None:
 				old_path = os.path.join(dirpath, filename)
-				if preview_id in base_dirs:
+				if preview_id in base_dirs or GAME_VERSION >= 30:
+
 					new_path = os.path.join(base_path, preview_id)
+					if not os.path.exists(new_path):
+						os.mkdir(new_path)
+
 					new_path = os.path.join(new_path, filename)
 				else:
 					new_path = os.path.join(base_path, filename)
@@ -597,17 +653,19 @@ def changeVers(music_db, old_ver, new_ver):
 	
 	return music_db
 
-def makeNewOmniFilesRec(path, merge_keys):
+def makeNewOmniFilesRec(path, merge_keys, GAME_VERSION):
 	for (dirpath, dirnames, filenames) in os.walk(path):
 		for dirname in dirnames:
-			makeNewOmniFilesRec(os.path.join(dirpath, dirname), merge_keys)
-			replaceFileDir(dirpath, dirname, merge_keys)
+			makeNewOmniFilesRec(os.path.join(dirpath, dirname), merge_keys, GAME_VERSION)
+			replaceFileDir(dirpath, dirname, merge_keys, GAME_VERSION)
 
 		if os.path.exists(os.path.join(dirpath, "preview")):
-			extractPreviews(dirpath)
+			extractPreviews(dirpath, GAME_VERSION)
 
-		for filename in filenames:
-			replaceFileDir(dirpath, filename, merge_keys)
+
+		fixFilenames(path, merge_keys, GAME_VERSION)
+		# for filename in filenames:
+		# 	replaceFileDir(dirpath, filename, merge_keys, GAME_VERSION)
 
 def createDB(file_path, db_type):
 	if db_type == "AC":
