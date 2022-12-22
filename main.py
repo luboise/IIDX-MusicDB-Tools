@@ -6,24 +6,21 @@ from dataStores import CONVERSION_DICT
 # USAGE SETTINGS              CHANGE YOUR SETTINGS HERE
 
 #version of DB being output
-game_version = 29
-OUTPUT_FILENAME = "working.bin"
+GAME_VERSION = 30
+OUTPUT_FILENAME = "sex.bin"
 
+OMNI_SONG_PATH = "just_inf"
 
 # Choose bin filenames here (put None to skip any)
 
 # Enter a clean .bin here from IIDX
-db_path = "music_data_0620.bin"
+db_path = "RESIDENT 20221031.bin"
 
 # Enter an omnimix bin here
-omni_path = "ch_v1.1.bin"
+omni_path = None #"ch_v1.1.bin"
 
 # Enter an infinitas bin here
-inf_db_path = "inf-20220727.bin"
-
-
-
-
+inf_db_path = "inf-20221221.bin"
 
 # Custom folder for merged songs  (enter game version 0-29, 0 for 1st style, 1 for substream, 29 for CH etc etc)
 use_custom_folder = True
@@ -50,7 +47,7 @@ remove_dp = 0
 #remove charts based on your lamp
 #limits are 0 NP, 1 F, 2 AC, 3 EC, 4 NC, 5 HC, 6 EX, 7 FC
 #EG using 5 will remove all charts you lack a HC on
-fervi_scorepath = "scores.json"
+fervi_scorepath = None
 lamp_limit_sp = 5
 lamp_limit_dp = 0
 
@@ -66,8 +63,8 @@ lamp_limit_dp = 0
 # PROGRAM STARTS HERE
 if __name__ == "__main__":
 	cwd = os.getcwd()
-	omni_data_folder = os.path.join(cwd, "omni_data")
-	output_data_folder = os.path.join(cwd, "data_output")
+	omni_data_folder = os.path.join(cwd, OMNI_SONG_PATH)
+	# output_data_folder = os.path.join(cwd, "data_output")
 
 
 
@@ -98,10 +95,10 @@ if __name__ == "__main__":
 
 
 	with open(OUTPUT_FILENAME, "wb") as write_file:
-		infdbt.writer_1a(write_file, music_db, game_version)
+		infdbt.writer_1a(write_file, music_db, GAME_VERSION)
 
-# omni_files = os.path.join(omni_data_folder, "data")
-# dbt.makeNewOmniFilesRec(omni_files, merge_keys = CONVERSION_DICT)
+
+	dbt.makeNewOmniFilesRec(omni_data_folder, merge_keys = CONVERSION_DICT, GAME_VERSION = GAME_VERSION)
 
 
 
