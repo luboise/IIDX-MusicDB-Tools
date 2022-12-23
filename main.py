@@ -7,14 +7,15 @@ from dataStores import CONVERSION_DICT
 
 #version of DB being output
 GAME_VERSION = 30
-OUTPUT_FILENAME = "sex.bin"
+OUTPUT_FILENAME = "fixed_omni.bin"
 
-OMNI_SONG_PATH = "just_inf"
+OMNI_SONG_PATH = None
+#OMNI_SONG_PATH = "just_inf"
 
 # Choose bin filenames here (put None to skip any)
 
 # Enter a clean .bin here from IIDX
-db_path = "RESIDENT 20221031.bin"
+db_path = "RESIDENT 20221031 0626.bin"
 
 # Enter an omnimix bin here
 omni_path = None #"ch_v1.1.bin"
@@ -63,10 +64,6 @@ lamp_limit_dp = 0
 # PROGRAM STARTS HERE
 if __name__ == "__main__":
 	cwd = os.getcwd()
-	omni_data_folder = os.path.join(cwd, OMNI_SONG_PATH)
-	# output_data_folder = os.path.join(cwd, "data_output")
-
-
 
 	if db_path != None:
 		header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
@@ -97,8 +94,9 @@ if __name__ == "__main__":
 	with open(OUTPUT_FILENAME, "wb") as write_file:
 		infdbt.writer_1a(write_file, music_db, GAME_VERSION)
 
-
-	dbt.makeNewOmniFilesRec(omni_data_folder, merge_keys = CONVERSION_DICT, GAME_VERSION = GAME_VERSION)
+	if OMNI_SONG_PATH is not None:
+		omni_data_folder = os.path.join(cwd, OMNI_SONG_PATH)
+		dbt.makeNewOmniFilesRec(omni_data_folder, merge_keys = CONVERSION_DICT, GAME_VERSION = GAME_VERSION)
 
 
 
