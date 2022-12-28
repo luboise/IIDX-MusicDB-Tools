@@ -7,7 +7,7 @@ from dataStores import CONVERSION_DICT
 
 #version of DB being output
 GAME_VERSION = 30
-OUTPUT_FILENAME = "fixed_omni.bin"
+OUTPUT_FILENAME = "iphone (edited).bin"
 
 OMNI_SONG_PATH = None
 #OMNI_SONG_PATH = "just_inf"
@@ -15,16 +15,16 @@ OMNI_SONG_PATH = None
 # Choose bin filenames here (put None to skip any)
 
 # Enter a clean .bin here from IIDX
-db_path = "RESIDENT 20221031 0626.bin"
+db_path = "iphone.bin"
 
 # Enter an omnimix bin here
 omni_path = None #"ch_v1.1.bin"
 
 # Enter an infinitas bin here
-inf_db_path = "inf-20221221.bin"
+inf_db_path = None #"inf-20221221.bin"
 
 # Custom folder for merged songs  (enter game version 0-29, 0 for 1st style, 1 for substream, 29 for CH etc etc)
-use_custom_folder = True
+use_custom_folder = False
 
 # Enter -1 to skip this feature
 custom_inf_folder = 1
@@ -35,7 +35,7 @@ change_all_versions = True
 
 
 # Strip diffs below top difficulty (keeps both another and legg if both exist)
-strip_lower_diffs = True
+strip_lower_diffs = False
 
 # Choose the max difficulty for removable difficulties
 # (eg. using 10 means that 11s and 12s wont be removed)
@@ -55,7 +55,7 @@ lamp_limit_dp = 0
 
 
 
-
+songs_to_remove = ["gigadelic", "Innocent Walls"]
 
 
 
@@ -93,6 +93,12 @@ if __name__ == "__main__":
 
 	with open(OUTPUT_FILENAME, "wb") as write_file:
 		infdbt.writer_1a(write_file, music_db, GAME_VERSION)
+
+
+	if len(songs_to_remove):
+		for song in songs_to_remove:
+			dbt.removeByTitle(music_db, song)
+
 
 	if OMNI_SONG_PATH is not None:
 		omni_data_folder = os.path.join(cwd, OMNI_SONG_PATH)

@@ -711,7 +711,12 @@ def filterByLamps(music_db, filepath, sp_limit, dp_limit):
 		if not isInt(key):
 			scores_db.pop(key)
 	
-
+def removeByTitle(music_db, title):
+	for key in list(music_db.keys()):
+		old_title = music_db[key]["title"].strip(b"\x00")
+		if old_title == bytes(title, encoding="UTF-8"):
+			music_db.pop(key)
+			return
 
 
 # def makeNewOmniFiles2(old_path, new_path, merge_keys):
