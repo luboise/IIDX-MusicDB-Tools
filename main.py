@@ -90,15 +90,12 @@ if __name__ == "__main__":
 	if fervi_scorepath is not None and (lamp_limit_sp > 0 or lamp_limit_dp > 0):
 		dbt.filterByLamps(music_db, filepath = fervi_scorepath, sp_limit = lamp_limit_sp, dp_limit = lamp_limit_dp)
 
-
-	with open(OUTPUT_FILENAME, "wb") as write_file:
-		infdbt.writer_1a(write_file, music_db, GAME_VERSION)
-
-
 	if len(songs_to_remove):
 		for song in songs_to_remove:
 			dbt.removeByTitle(music_db, song)
 
+	with open(OUTPUT_FILENAME, "wb") as write_file:
+		infdbt.writer_1a(write_file, music_db, GAME_VERSION)
 
 	if OMNI_SONG_PATH is not None:
 		omni_data_folder = os.path.join(cwd, OMNI_SONG_PATH)
