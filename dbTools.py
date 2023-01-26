@@ -10,9 +10,6 @@ from ifstools import IFS
 #from locale import format_string
 #from multiprocessing.sharedctypes import Value
 
-
-
-
 def arrayFromBinary(bin_path, starting_byte_index, fmt_string, iterations = 1, dict_type = "NONE"):
 	if dict_type == "NONE":
 		return_values = []
@@ -645,6 +642,99 @@ class IIDXMusicDB:
 			song[9] = 0
 			
 			self.music_db[i] = song
+
+
+	def getSoflanCharts(self, contents_folder):
+		if not os.path.isdir(contents_folder):
+			print(f"Given path is not a directory: {contents_folder}\nCould not get soflan chart list.")
+			return
+		
+		data_folder = os.path.join(contents_folder, "data")
+		if not os.path.isdir(data_folder):
+			print(f"ERROR: data folder missing in {contents_folder}\nCould not get soflan chart list.")
+			return
+
+		sound_folder = os.path.join(data_folder, "sound")
+		if not os.path.isdir(sound_folder):
+			print(f"ERROR: sound folder missing in {data_folder}")
+			return
+
+		song_obj = dict()
+		chart_obj = dict()
+
+		for song_id in self.music_db:
+			chart_filepath = os.path.join(sound_folder, str(song_id), str(song_id) + ".1")
+			if not os.path.isfile(chart_filepath):
+				# print(f"File in wrong format: {os.path.basename(chart_filepath)}\nSkipping file.\n")
+				# TODO implement extracting IFS files
+				continue
+
+			# SPN SPH SPA SPB SPL --- DPN DPH DPA DPB DPL ---
+			# offset_ms: [numerator, denominator]
+			diff_bpm_changes = getSoflanFromFile(chart_filepath)
+
+			# Replace songs with a single BPM with None instead
+			diff_bpm_changes_culled = [bpm_changes_list if bpm_changes_list is not None and len(bpm_changes_list) >= 2 else None for bpm_changes_list in diff_bpm_changes]
+
+			# Skip song if all difficulties have a single BPM
+			if not any(diff_bpm_changes_culled):
+				continue
+
+
+			# Print BPM changes of SPN (testing purposes)
+
+			# decoded_title = self.music_db[song_id]['title'].decode(encoding = "cp932")
+			# bpm_list = [diff_bpm_changes_culled[0][ms_value][0] / diff_bpm_changes_culled[0][ms_value][1] for ms_value in diff_bpm_changes_culled[0]]
+			# print("Song found:", f"ID: {song_id}", f"Title: {decoded_title}", sep = "\n", end = "\n")
+			# for ms in diff_bpm_changes_culled[0]:
+			# 	print(f"{ms}: {diff_bpm_changes_culled[0][ms]}")
+
+			
+def getSoflanFromFile(chart_filepath):
+	if not os.path.exists(chart_filepath) or not chart_filepath.endswith(".1"):
+		print(f"ERROR: Invalid chart given {chart_filepath}\nUnable to find soflan for chart.")
+
+	bc = 0
+	chart_headers = arrayFromBinary(chart_filepath, bc, DOTONE_CHART_HEADER_FMTSTRING, iterations = 12)
+
+	soflan_lists = []
+
+	for chart_header in chart_headers:
+		if chart_header == [0, 0]:
+			soflan_lists.append(None)
+			continue
+		
+		num_events = chart_header[1] // struct.calcsize(DOTONE_CHART_EVENT_FMTSTRING)
+		chart_events = arrayFromBinary(chart_filepath, chart_header[0], DOTONE_CHART_EVENT_FMTSTRING, iterations = num_events)
+
+		events_dict = dict()
+
+		# Filter events list for soflan changes only
+		for event in chart_events:
+			if event[1] == 4 and event[0] not in events_dict:
+				events_dict[event[0]] = [event[3], event[2]]
+
+		soflan_lists.append(events_dict)
+
+	return soflan_lists
+
+	# bc += struct.calcsize(self.header_fmt)
+
+	# self.header_array = self.header_array[0]
+
+	# fmt_string = str(self.header_array[3]) + "H"
+	# indices_list = arrayFromBinary(file_path, bc, fmt_string)
+	# indices_list = indices_list[0]
+	# bc += self.header_array[3] * 2
+
+	# self.song_index_list = getEntryList(indices_list, 0, self.header_array[3], raw_binary=False)
+
+	# self.music_db = arrayFromBinary(file_path, bc, self.song_fmt, self.header_array[2], db_type)
+	# bc += self.header_array[3] * 2
+
+
+
+
 
 
 	# def exportDBJSON(self, header_array, songDataArray, output_path = "db.json"):
