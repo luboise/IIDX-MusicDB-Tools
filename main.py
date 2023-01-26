@@ -7,7 +7,7 @@ from dataStores import CONVERSION_DICT
 
 #version of DB being output
 GAME_VERSION = 30
-OUTPUT_FILENAME = "iphone (edited).bin"
+OUTPUT_FILENAME = "test that it works.bin"
 
 OMNI_SONG_PATH = None
 #OMNI_SONG_PATH = "just_inf"
@@ -15,13 +15,13 @@ OMNI_SONG_PATH = None
 # Choose bin filenames here (put None to skip any)
 
 # Enter a clean .bin here from IIDX
-db_path = "iphone.bin"
+db_path = "RESIDENT 20221031.bin"
 
 # Enter an omnimix bin here
-omni_path = None #"ch_v1.1.bin"
+omni_path = "RESIDENT 20221031 0626.bin" #"ch_v1.1.bin"
 
 # Enter an infinitas bin here
-inf_db_path = None #"inf-20221221.bin"
+inf_db_path = "inf-20221221.bin" #"inf-20221221.bin"
 
 # Custom folder for merged songs  (enter game version 0-29, 0 for 1st style, 1 for substream, 29 for CH etc etc)
 use_custom_folder = False
@@ -66,36 +66,36 @@ if __name__ == "__main__":
 	cwd = os.getcwd()
 
 	if db_path != None:
-		header_array, song_index_list, music_db = dbt.createDB(db_path, "AC")
+		main_db = dbt.IIDXMusicDB(db_path, "AC")
 
 	if omni_path != None:
-		omni_header_array, omni_song_index_list, omni_music_db = dbt.createDB(omni_path, "AC")
+		omni_db = dbt.IIDXMusicDB(omni_path, "AC")
 		
 		if use_custom_folder and change_all_versions:
-			music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
+			main_db.changeVers(custom_inf_folder, move_orig_folder_to)
 		
-		music_db = dbt.mergeDBs(music_db, omni_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
+		main_db.mergeDBs(omni_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
 
 	if inf_db_path != None:
-		inf_header_array, inf_song_index_list, inf_music_db = dbt.createDB(inf_db_path, "INF")
+		inf_db = dbt.IIDXMusicDB(inf_db_path, "INF")
 
 		if use_custom_folder:
-			music_db = dbt.changeVers(music_db, custom_inf_folder, move_orig_folder_to)
+			main_db.changeVers(custom_inf_folder, move_orig_folder_to)
 
-		music_db = dbt.mergeDBs(music_db, inf_music_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
+		main_db.mergeDBs(inf_db, merge_keys = CONVERSION_DICT, strip_only_inf = False, custom_version = (custom_inf_folder if use_custom_folder else -1))
 
 	if strip_lower_diffs:
-		dbt.stripLowers(music_db, max_removable_sp = remove_sp, max_removable_dp = remove_dp)
+		main_db.stripLowers(max_removable_sp = remove_sp, max_removable_dp = remove_dp)
 
 	if fervi_scorepath is not None and (lamp_limit_sp > 0 or lamp_limit_dp > 0):
-		dbt.filterByLamps(music_db, filepath = fervi_scorepath, sp_limit = lamp_limit_sp, dp_limit = lamp_limit_dp)
+		main_db.filterByLamps(filepath = fervi_scorepath, sp_limit = lamp_limit_sp, dp_limit = lamp_limit_dp)
 
 	if len(songs_to_remove):
 		for song in songs_to_remove:
-			dbt.removeByTitle(music_db, song)
+			main_db.removeByTitle(song)
 
 	with open(OUTPUT_FILENAME, "wb") as write_file:
-		infdbt.writer_1a(write_file, music_db, GAME_VERSION)
+		infdbt.writer_1a(write_file, main_db.music_db, GAME_VERSION)
 
 	if OMNI_SONG_PATH is not None:
 		omni_data_folder = os.path.join(cwd, OMNI_SONG_PATH)

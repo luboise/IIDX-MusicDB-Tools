@@ -114,52 +114,6 @@ def LEReadData(array, start_index, data_type):
 	
 	return index_dict'''
 
-def korskify(music_db, aliases, title_template):
-	genre_counts = {}
-	genre_check = title_template.replace(b"{genre}", b"")
-
-	for i in range(len(aliases)):
-		aliases[i] = aliases[i].lower()
-
-	for i in range(len(music_db)):
-		song = music_db[i]
-		if song[0].startswith(title_template) or song[0].endswith(title_template):
-			continue
-
-
-		found = False
-		uni_artist = song[3].decode(encoding="utf-8", errors='ignore').lower()
-		
-		for alias in aliases:
-			if found == False:
-				if alias in uni_artist:
-					found = True
-		
-		if (found == False):
-			continue
-		
-		song_genre = song[2]
-		new_title = title_template.replace(b"{genre}", song_genre)
-
-		if song_genre in genre_counts:
-			genre_counts[song_genre] += 1
-			end_index = new_title.find(b"\x00")
-			new_title = new_title[:end_index] + b" " + bytes(str(genre_counts[song_genre]), encoding="utf-8") + new_title[end_index:]
-		else:
-			genre_counts[song_genre] = 1
-
-		new_title = new_title[:64]
-
-		song[0] = new_title
-		song[1] = new_title
-		song[4] = 0
-		song[7] = 0
-		song[9] = 0
-		
-		music_db[i] = song
-
-	return music_db
-
 
 def getEntryList(array, start_index, num_entries, raw_binary = False):
 	index_list = []
@@ -228,59 +182,6 @@ def makeDB(array, start_index, song_indices):
 
 	return return_list
 
-
-
-def makeSongData(songDataArray):
-	return_list = []
-
-	for i in range(len(songDataArray)):
-		new_dict = {
-			"song_id": songDataArray[i][0],
-            "title": songDataArray[i][1],
-            "title_ascii": songDataArray[i][2],
-            "genre": songDataArray[i][3],
-            "artist": songDataArray[i][4],
-            "texture_title": songDataArray[i][5],
-            "texture_artist": songDataArray[i][6],
-            "texture_genre": songDataArray[i][7],
-            "texture_load": songDataArray[i][8],
-            #"texture_list": songDataArray[i][4],
-            #"font_idx": 0,
-            "game_version": songDataArray[i][9],
-            #"other_folder": 1,          fskip 2
-            #"bemani_folder": 0,         fskip 2
-            #"splittable_diff": 0,       fskip 3
-            "difficulties": songDataArray[i][10] + songDataArray[i][11],
-            #"volume": 105,        fskip
-
-#            "file_identifiers": [              fskip 10
-#                48,
-#                49,
-#                97,
-#                97,
-#                48,
-#                48,
-#                50,
-#                97,
-#                97,
-#                48
-#            ],
-
-            "bga_filename": songDataArray[i][14]
-		}
-
-		return_list.append(new_dict)
-	return return_list
-
-
-def exportDBJSON(header_array, songDataArray, output_path = "db.json"):
-	outputDict = {
-		"data_ver": header_array[1],
-		"data": makeSongData(songDataArray)
-	}
-
-	with open(output_path, "w", encoding = "utf-8") as json_path:
-		makeJSON(outputDict, json_path, indent = 4)
 
 def arrayToBinary(file_object, input_array, fmt_string, iterations = 1, offset = 0):
 	struct_object = struct.Struct(fmt_string)    #instantiates Struct class to use for unpacking the binary (according to header format)
@@ -445,82 +346,6 @@ def mergeDiffs(entry, main_diffs, sub_diffs):
 	
 	return entry
 
-
-def mergeDBs(db_main, db_sub, merge_keys = {}, strip_only_inf = False, custom_version = -1, merge_diffs = True):
-	for song_key in db_sub:         #Each song in new db
-		if (strip_only_inf and song_key < 80000):
-			continue
-		
-		if song_key in merge_keys:
-			new_ID = merge_keys[song_key]
-			new_entry = changeID(db_sub[song_key], new_ID, custom_version)
-		else:
-			new_ID = song_key
-			new_entry = db_sub[song_key]
-		
-		if new_ID in db_main:
-			if not merge_diffs:
-				continue
-
-			old_diffs = makeDiffList(db_main[new_ID])
-			new_diffs = makeDiffList(db_sub[song_key])
-
-			if new_diffs != old_diffs:
-				new_entry = mergeDiffs(db_main[song_key], old_diffs, new_diffs)
-				db_main[song_key] = new_entry
-			else:
-				continue
-		
-		else:
-			db_main[new_entry["song_id"]] = new_entry
-
-	return db_main
-
-
-def stripLowers(music_db, max_removable_sp = 12, max_removable_dp = 12):
-	if not (max_removable_sp in range(1, 13) or max_removable_dp in range(1, 13)):
-		print(f"No songs are removable.\nSP: {max_removable_sp}\nDP: {max_removable_dp}")
-		return
-
-	for song_key in music_db:
-		song = music_db[song_key]
-		diffs = makeDiffList(song)
-		new_diffs = diffs[:]
-
-		if diffs[2] == 12:
-			found = True
-
-		if max_removable_sp in range(1, 13):
-			max_sp = None
-			for i in reversed(range(5)):
-				if diffs[i] != 0:
-					max_sp = i
-					break
-			
-			if max_sp != None:
-				# Ensures the legg and another are both kept
-				for i in range(3 if (max_sp >= 3) else max_sp):
-					if diffs[i] <= max_removable_sp:
-						new_diffs[i] = 0			
-
-
-		if max_removable_dp in range(1, 13):
-			max_dp = None
-			for i in reversed(range(0 + 5, 5 + 5)):
-				if diffs[i] != 0:
-					max_dp = i
-					break
-			
-			if max_dp != None:
-				if max_dp >= 3 + 5:
-					for i in range(0 + 5, (3 + 5) if (max_dp >= 3 + 5) else max_dp):
-						if diffs[i] <= max_removable_dp:
-							new_diffs[i] = 0
-		
-		if diffs != new_diffs:
-			for i in range(len(SONG_POSSIBLE_DIFFS)):
-				song[SONG_POSSIBLE_DIFFS[i]] = new_diffs[i]
-
 		
 
 # def normStr(string, index):
@@ -646,13 +471,6 @@ def extractPreviews(base_path, GAME_VERSION):
 	if len(os.listdir(previews_path)) == 0:
 		os.remove(previews_path)
 
-def changeVers(music_db, old_ver, new_ver):
-	for key in music_db:
-		if music_db[key]["game_version"] == old_ver:
-			music_db[key]["game_version"] = new_ver
-	
-	return music_db
-
 def makeNewOmniFilesRec(path, merge_keys, GAME_VERSION):
 	for (dirpath, dirnames, filenames) in os.walk(path):
 		for dirname in dirnames:
@@ -667,57 +485,218 @@ def makeNewOmniFilesRec(path, merge_keys, GAME_VERSION):
 		# for filename in filenames:
 		# 	replaceFileDir(dirpath, filename, merge_keys, GAME_VERSION)
 
-def createDB(file_path, db_type):
-	if db_type == "AC":
-		header_fmt = AC_HEADER_FMTSTRING
-		song_fmt = AC_CHART_FMTSTRING
-	elif db_type == "INF":
-		header_fmt = INF_HEADER_FMTSTRING
-		song_fmt = INF_CHART_FMTSTRING
-	else:
-		raise ValueError("Invalid Music DB type given, AC or IIDX REQUIRED, " + str(db_type) + " given.")
+class IIDXMusicDB:
+	def __init__(self, file_path, db_type):
+		if db_type == "AC":
+			self.header_fmt = AC_HEADER_FMTSTRING
+			self.song_fmt = AC_CHART_FMTSTRING
+		elif db_type == "INF":
+			self.header_fmt = INF_HEADER_FMTSTRING
+			self.song_fmt = INF_CHART_FMTSTRING
+		else:
+			raise ValueError("Invalid Music DB type given, AC or IIDX REQUIRED, " + str(db_type) + " given.")
 
-	bc = 0
+		bc = 0
 
-	header_array = arrayFromBinary(file_path, bc, header_fmt)
-	bc += struct.calcsize(header_fmt)
+		self.header_array = arrayFromBinary(file_path, bc, self.header_fmt)
+		bc += struct.calcsize(self.header_fmt)
 
-	header_array = header_array[0]
+		self.header_array = self.header_array[0]
 
-	fmt_string = str(header_array[3]) + "H"
-	indices_list = arrayFromBinary(file_path, bc, fmt_string)
-	indices_list = indices_list[0]
-	bc += header_array[3] * 2
+		fmt_string = str(self.header_array[3]) + "H"
+		indices_list = arrayFromBinary(file_path, bc, fmt_string)
+		indices_list = indices_list[0]
+		bc += self.header_array[3] * 2
 
-	song_index_list = getEntryList(indices_list, 0, header_array[3], raw_binary=False)
+		self.song_index_list = getEntryList(indices_list, 0, self.header_array[3], raw_binary=False)
 
-	music_db = arrayFromBinary(file_path, bc, song_fmt, header_array[2], db_type)
-	bc += header_array[3] * 2
+		self.music_db = arrayFromBinary(file_path, bc, self.song_fmt, self.header_array[2], db_type)
+		bc += self.header_array[3] * 2
 
-	return header_array, song_index_list, music_db
+	def removeByTitle(self, title):
+		for key in list(self.music_db.keys()):
+			old_title = self.music_db[key]["title"].strip(b"\x00")
+			if old_title == bytes(title, encoding="UTF-8"):
+				self.music_db.pop(key)
+				return
 
-
-def filterByLamps(music_db, filepath, sp_limit, dp_limit):
-	try:
-		with open(filepath, "r") as file:
-			scores_db = getJSON(file)
-	except Exception as e:
-		print(f"Unable to open {filepath}. Exception printed below.")
-		print(e.message)
-		return
-	
-	#remove non song IDS
-	for key in scores_db:
-		if not isInt(key):
-			scores_db.pop(key)
-	
-def removeByTitle(music_db, title):
-	for key in list(music_db.keys()):
-		old_title = music_db[key]["title"].strip(b"\x00")
-		if old_title == bytes(title, encoding="UTF-8"):
-			music_db.pop(key)
+	def stripLowers(self, max_removable_sp = 12, max_removable_dp = 12):
+		if not (max_removable_sp in range(1, 13) or max_removable_dp in range(1, 13)):
+			print(f"No songs are removable.\nSP: {max_removable_sp}\nDP: {max_removable_dp}")
 			return
 
+		for song_key in self.music_db:
+			song = self.music_db[song_key]
+			diffs = makeDiffList(song)
+			new_diffs = diffs[:]
+
+			if diffs[2] == 12:
+				found = True
+
+			if max_removable_sp in range(1, 13):
+				max_sp = None
+				for i in reversed(range(5)):
+					if diffs[i] != 0:
+						max_sp = i
+						break
+				
+				if max_sp != None:
+					# Ensures the legg and another are both kept
+					for i in range(3 if (max_sp >= 3) else max_sp):
+						if diffs[i] <= max_removable_sp:
+							new_diffs[i] = 0			
+
+
+			if max_removable_dp in range(1, 13):
+				max_dp = None
+				for i in reversed(range(0 + 5, 5 + 5)):
+					if diffs[i] != 0:
+						max_dp = i
+						break
+				
+				if max_dp != None:
+					if max_dp >= 3 + 5:
+						for i in range(0 + 5, (3 + 5) if (max_dp >= 3 + 5) else max_dp):
+							if diffs[i] <= max_removable_dp:
+								new_diffs[i] = 0
+			
+			if diffs != new_diffs:
+				for i in range(len(SONG_POSSIBLE_DIFFS)):
+					song[SONG_POSSIBLE_DIFFS[i]] = new_diffs[i]
+
+	def mergeDBs(self, sub_music_db, merge_keys = {}, strip_only_inf = False, custom_version = -1, merge_diffs = True):
+		db_main = self.music_db
+		db_sub = sub_music_db.music_db
+
+		for song_key in db_sub:         #Each song in new db
+			if (strip_only_inf and song_key < 80000):
+				continue
+			
+			if song_key in merge_keys:
+				new_ID = merge_keys[song_key]
+				new_entry = changeID(db_sub[song_key], new_ID, custom_version)
+			else:
+				new_ID = song_key
+				new_entry = db_sub[song_key]
+			
+			if new_ID in db_main:
+				if not merge_diffs:
+					continue
+
+				old_diffs = makeDiffList(db_main[new_ID])
+				new_diffs = makeDiffList(db_sub[song_key])
+
+				if new_diffs != old_diffs:
+					new_entry = mergeDiffs(db_main[song_key], old_diffs, new_diffs)
+					db_main[song_key] = new_entry
+				else:
+					continue
+			
+			else:
+				db_main[new_entry["song_id"]] = new_entry
+
+		return db_main
+
+	def changeVers(self, old_ver, new_ver):
+		for key in self.music_db:
+			if self.music_db[key]["game_version"] == old_ver:
+				self.music_db[key]["game_version"] = new_ver
+
+	def korskify(self, aliases, title_template):
+		genre_counts = {}
+		genre_check = title_template.replace(b"{genre}", b"")
+
+		for i in range(len(aliases)):
+			aliases[i] = aliases[i].lower()
+
+		for i in range(len(self.music_db)):
+			song = self.music_db[i]
+			if song[0].startswith(title_template) or song[0].endswith(title_template):
+				continue
+
+
+			found = False
+			uni_artist = song[3].decode(encoding="utf-8", errors='ignore').lower()
+			
+			for alias in aliases:
+				if found == False:
+					if alias in uni_artist:
+						found = True
+			
+			if (found == False):
+				continue
+			
+			song_genre = song[2]
+			new_title = title_template.replace(b"{genre}", song_genre)
+
+			if song_genre in genre_counts:
+				genre_counts[song_genre] += 1
+				end_index = new_title.find(b"\x00")
+				new_title = new_title[:end_index] + b" " + bytes(str(genre_counts[song_genre]), encoding="utf-8") + new_title[end_index:]
+			else:
+				genre_counts[song_genre] = 1
+
+			new_title = new_title[:64]
+
+			song[0] = new_title
+			song[1] = new_title
+			song[4] = 0
+			song[7] = 0
+			song[9] = 0
+			
+			self.music_db[i] = song
+
+
+	# def exportDBJSON(self, header_array, songDataArray, output_path = "db.json"):
+	# 	outputDict = {
+	# 		"data_ver": header_array[1],
+	# 		"data": makeSongData(songDataArray)
+	# 	}
+
+	# 	with open(output_path, "w", encoding = "utf-8") as json_path:
+	# 		makeJSON(outputDict, json_path, indent = 4)
+
+	# def makeSongData(songDataArray):
+	# 	return_list = []
+
+	# 	for i in range(len(songDataArray)):
+	# 		new_dict = {
+	# 			"song_id": songDataArray[i][0],
+	# 			"title": songDataArray[i][1],
+	# 			"title_ascii": songDataArray[i][2],
+	# 			"genre": songDataArray[i][3],
+	# 			"artist": songDataArray[i][4],
+	# 			"texture_title": songDataArray[i][5],
+	# 			"texture_artist": songDataArray[i][6],
+	# 			"texture_genre": songDataArray[i][7],
+	# 			"texture_load": songDataArray[i][8],
+	# 			#"texture_list": songDataArray[i][4],
+	# 			#"font_idx": 0,
+	# 			"game_version": songDataArray[i][9],
+	# 			#"other_folder": 1,          fskip 2
+	# 			#"bemani_folder": 0,         fskip 2
+	# 			#"splittable_diff": 0,       fskip 3
+	# 			"difficulties": songDataArray[i][10] + songDataArray[i][11],
+	# 			#"volume": 105,        fskip
+
+	# #            "file_identifiers": [              fskip 10
+	# #                48,
+	# #                49,
+	# #                97,
+	# #                97,
+	# #                48,
+	# #                48,
+	# #                50,
+	# #                97,
+	# #                97,
+	# #                48
+	# #            ],
+
+	# 			"bga_filename": songDataArray[i][14]
+	# 		}
+
+	# 		return_list.append(new_dict)
+	# 	return return_list
 
 # def makeNewOmniFiles2(old_path, new_path, merge_keys):
 # 	for (dirpath, dirnames, filenames) in os.walk(cwd):
@@ -760,4 +739,16 @@ def removeByTitle(music_db, title):
 # 			if not os.path.exists(new_path):
 # 				shutil.copy(old_path, new_path)
 
+# def filterByLamps(music_db, filepath, sp_limit, dp_limit):
+# 	try:
+# 		with open(filepath, "r") as file:
+# 			scores_db = getJSON(file)
+# 	except Exception as e:
+# 		print(f"Unable to open {filepath}. Exception printed below.")
+# 		print(e.message)
+# 		return
 	
+# 	#remove non song IDS
+# 	for key in scores_db:
+# 		if not isInt(key):
+# 			scores_db.pop(key)
