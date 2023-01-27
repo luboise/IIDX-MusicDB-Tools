@@ -697,8 +697,9 @@ class IIDXMusicDB:
 				continue
 
 			# Initialise song object
-			song_obj = dict()
-			for key in ("song_id", "game_version", "title", "title_ascii", "genre", "artist"):
+			song_obj = {"song_id": song_id}
+
+			for key in ("game_version", "title", "title_ascii", "genre", "artist"):
 				fetched_data = self.music_db[int(song_id)][key]
 
 				# Decode if it is a bytes string
@@ -707,6 +708,7 @@ class IIDXMusicDB:
 
 				song_obj[key] = fetched_data
 
+			
 			song_obj["chart_ids"] = []
 
 			diff_array = [4, 2, 0, 1, 3]

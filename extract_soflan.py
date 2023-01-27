@@ -25,7 +25,7 @@ if __name__ == "__main__":
 	pog_db = dbt.IIDXMusicDB(db_path, "AC")
 	song_objects, chart_objects = pog_db.getSoflanCharts(contents_folder)
 
-	with open("song_objects.json", "w", encoding = "cp932") as f:
+	with open("song_objects.json", "w", encoding = "utf-8") as f:
 		f.write(json.dumps(song_objects, indent=4, ensure_ascii=False))
-	with open("chart_objects.json", "w", encoding = "cp932") as f:
+	with open("chart_objects.json", "w", encoding = "utf-8") as f:
 		f.write(json.dumps(chart_objects, indent=4, ensure_ascii=False))
