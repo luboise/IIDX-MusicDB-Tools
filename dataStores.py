@@ -41,3 +41,5 @@ CONVERSION_DICT = {
 
 SONG_POSSIBLE_DIFFS = ['SPB_diff', 'SPN_diff', 'SPH_diff', 'SPA_diff', 'SPL_diff',
 'DPB_diff', 'DPN_diff',  'DPH_diff',  'DPA_diff', 'DPL_diff']
+
+CUSTOM_EXTRACTION_PATH = "__DB_Extraction"

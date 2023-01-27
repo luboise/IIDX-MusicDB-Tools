@@ -10,6 +10,7 @@ data_output/
 
 *.bin
 *.csv
+*_objects.json
 zips/
 
 just_inf/

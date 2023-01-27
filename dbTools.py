@@ -6,6 +6,7 @@ from dataStores import *
 import os
 import shutil
 
+
 from ifstools import IFS
 #from locale import format_string
 #from multiprocessing.sharedctypes import Value
@@ -390,7 +391,20 @@ def cleanExtractIFS(base_folder, merge_keys, GAME_VERSION, inplace = True):
 	
 	fixFilenames(base_folder, merge_keys, GAME_VERSION)
 
+def cleanExtractIFSNonRecursive(ifs_filepath, extraction_folder = None):
+	if os.path.isfile(ifs_filepath):
+		extraction_path = os.path.dirname(ifs_filepath)
 
+		# Use custom extraction path if given
+		if extraction_folder is not None:
+			extraction_path = os.path.join(extraction_path, extraction_folder)
+		
+
+		current_IFS = IFS(ifs_filepath)
+		current_IFS.extract(path = extraction_path, rename_dupes = True, progress = False)
+		current_IFS.close()
+	else:
+		print(f"ERROR: File does not exist: {ifs_filepath}")
 
 
 
@@ -644,6 +658,7 @@ class IIDXMusicDB:
 			self.music_db[i] = song
 
 
+
 	def getSoflanCharts(self, contents_folder):
 		if not os.path.isdir(contents_folder):
 			print(f"Given path is not a directory: {contents_folder}\nCould not get soflan chart list.")
@@ -659,37 +674,99 @@ class IIDXMusicDB:
 			print(f"ERROR: sound folder missing in {data_folder}")
 			return
 
-		song_obj = dict()
-		chart_obj = dict()
+		song_objects = dict()
+		chart_objects = dict()
 
 		for song_id in self.music_db:
-			chart_filepath = os.path.join(sound_folder, str(song_id), str(song_id) + ".1")
-			if not os.path.isfile(chart_filepath):
-				# print(f"File in wrong format: {os.path.basename(chart_filepath)}\nSkipping file.\n")
-				# TODO implement extracting IFS files
-				continue
+			song_id = f"{song_id:05d}"
+
+			# Find or extract chart file
+			chart_filepath = getSongDotOnePathByID(sound_folder = sound_folder, song_id = song_id)
+			if not chart_filepath:
+				print(f"ERROR: Chart could not be located or extracted for ID {song_id}")				
 
 			# SPN SPH SPA SPB SPL --- DPN DPH DPA DPB DPL ---
 			# offset_ms: [numerator, denominator]
 			diff_bpm_changes = getSoflanFromFile(chart_filepath)
 
 			# Replace songs with a single BPM with None instead
-			diff_bpm_changes_culled = [bpm_changes_list if bpm_changes_list is not None and len(bpm_changes_list) >= 2 else None for bpm_changes_list in diff_bpm_changes]
+			diff_bpm_changes = [bpm_changes_list if bpm_changes_list is not None and len(bpm_changes_list) >= 2 else None for bpm_changes_list in diff_bpm_changes]
 
 			# Skip song if all difficulties have a single BPM
-			if not any(diff_bpm_changes_culled):
+			if not any(diff_bpm_changes):
 				continue
 
+			# Initialise song object
+			song_obj = dict()
+			for key in ("song_id", "game_version", "title", "title_ascii", "genre", "artist"):
+				fetched_data = self.music_db[int(song_id)][key]
 
-			# Print BPM changes of SPN (testing purposes)
+				# Decode if it is a bytes string
+				if isinstance(fetched_data, bytes):
+					fetched_data = fetched_data.strip(b"\x00").decode("cp932")
 
-			# decoded_title = self.music_db[song_id]['title'].decode(encoding = "cp932")
-			# bpm_list = [diff_bpm_changes_culled[0][ms_value][0] / diff_bpm_changes_culled[0][ms_value][1] for ms_value in diff_bpm_changes_culled[0]]
-			# print("Song found:", f"ID: {song_id}", f"Title: {decoded_title}", sep = "\n", end = "\n")
-			# for ms in diff_bpm_changes_culled[0]:
-			# 	print(f"{ms}: {diff_bpm_changes_culled[0][ms]}")
+				song_obj[key] = fetched_data
 
+			song_obj["chart_ids"] = []
+
+			diff_array = [4, 2, 0, 1, 3]
+			chart_added = False
+
+			print(f"\nFound song with soflan:\nid: {song_id}\ntitle: {song_obj['title']}\nDifficulties:")
+
+			for i, diff_index in enumerate(diff_array):
+				current_diff_has_soflan = diff_bpm_changes[diff_index] is not None
+
+				if current_diff_has_soflan:
+					soflan_covered = chart_added and diff_bpm_changes[diff_index] == diff_bpm_changes[diff_array[i-1]]
+					if soflan_covered:
+						continue
+
+					in_game_diff_index = len(diff_array) - 1 - i
+
+					chart_id = f"{song_id}_{in_game_diff_index}"
+
+					single_chart = {
+						"chart_id": chart_id,
+						"song_id": song_id,
+						"diff": in_game_diff_index,
+						"methods": [],
+					}
+					chart_objects[chart_id] = single_chart
+					song_obj["chart_ids"].append(chart_id)
+
+					print(f"   {SONG_POSSIBLE_DIFFS[in_game_diff_index]}")
+					chart_added = True
+				else:
+					if chart_added:
+						break
 			
+			song_objects[song_id] = song_obj
+
+		return song_objects, chart_objects
+
+def getSongDotOnePathByID(sound_folder, song_id):
+	folder_style_chart_path = os.path.join(sound_folder, song_id, song_id + ".1")
+	ifs_style_chart_path = os.path.join(sound_folder, CUSTOM_EXTRACTION_PATH, song_id, f"{song_id}.1")
+
+	if os.path.isfile(folder_style_chart_path):
+		return folder_style_chart_path
+	elif os.path.isfile(ifs_style_chart_path):
+		return ifs_style_chart_path
+
+	ifs_path = os.path.join(sound_folder, f"{song_id}.ifs")
+	if not os.path.isfile(ifs_path):
+		print(f"ERROR: IFS file {ifs_path} doesn't exist.")
+		return False
+	
+	cleanExtractIFSNonRecursive(ifs_path, extraction_folder=CUSTOM_EXTRACTION_PATH)
+	if os.path.isfile(ifs_style_chart_path):
+		return ifs_style_chart_path
+	else:
+		print(f"ERROR: Could not find chart file (.1) after extraction at path {ifs_style_chart_path}.")
+		return None
+	# print(f"File in wrong format: {os.path.basename(chart_filepath)}\nSkipping file.\n")
+
 def getSoflanFromFile(chart_filepath):
 	if not os.path.exists(chart_filepath) or not chart_filepath.endswith(".1"):
 		print(f"ERROR: Invalid chart given {chart_filepath}\nUnable to find soflan for chart.")
