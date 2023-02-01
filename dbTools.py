@@ -747,6 +747,27 @@ class IIDXMusicDB:
 
 		return song_objects, chart_objects
 
+	def portOldTheoryMethods(self, chart_objects, OLD_THEORY_PATH):
+		song_objects = None
+		chart_objects = None
+
+
+		# print(OLD_THEORY_PATH, song_objects, chart_objects, sep="\n")
+
+		method_objects = dict()
+
+		for version_folder_name in os.listdir(OLD_THEORY_PATH):
+			version_path = os.path.join(OLD_THEORY_PATH, version_folder_name)
+
+			for method_file in os.listdir(version_path):
+				if method_file.endswith(".md"):
+					md_path = os.path.join(version_path, method_file)
+
+					#TODO Check what song the md_file is for, port the methods to objects
+		
+		return method_objects
+
+
 def getSongDotOnePathByID(sound_folder, song_id):
 	folder_style_chart_path = os.path.join(sound_folder, song_id, song_id + ".1")
 	ifs_style_chart_path = os.path.join(sound_folder, CUSTOM_EXTRACTION_PATH, song_id, f"{song_id}.1")
