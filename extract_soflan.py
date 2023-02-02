@@ -23,15 +23,27 @@ contents_folder = "C:\\LDJ-003-2022101900\\contents"
 
 if __name__ == "__main__":
 	pog_db = dbt.IIDXMusicDB(db_path, "AC")
-	song_objects, chart_objects = pog_db.getSoflanCharts(contents_folder)
 
+	song_objects = None
+	chart_objects = None
+
+	USE_EXISTING_OBJECTS = True
+	if USE_EXISTING_OBJECTS:
+		with open("song_objects.json", "r", encoding="utf-8") as f:
+			song_objects = json.load(f)
+		with open("chart_objects.json", "r", encoding="utf-8") as f:
+			chart_objects = json.load(f)
+	else:
+		song_objects, chart_objects = pog_db.getSoflanCharts(contents_folder)
 
 	script_path = os.path.dirname(__file__)
 	OLD_THEORY_PATH = os.path.abspath(os.path.join(script_path, "..", "old_theory", "docs", "resources", "chartdirectory"))
 
 	method_objects = pog_db.portOldTheoryMethods(chart_objects, OLD_THEORY_PATH)
 
-	with open("song_objects.json", "w", encoding = "utf-8") as f:
+	with open("song_objects_out.json", "w", encoding = "utf-8") as f:
 		f.write(json.dumps(song_objects, indent=4, ensure_ascii=False))
-	with open("chart_objects.json", "w", encoding = "utf-8") as f:
+	with open("chart_objects_out.json", "w", encoding = "utf-8") as f:
 		f.write(json.dumps(chart_objects, indent=4, ensure_ascii=False))
+	with open("method_objects_out.json", "w", encoding = "utf-8") as f:
+		f.write(json.dumps(method_objects, indent=4, ensure_ascii=False))

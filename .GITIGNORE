@@ -11,6 +11,8 @@ data_output/
 *.bin
 *.csv
 *_objects.json
+*_out.json
+
 zips/
 
 just_inf/

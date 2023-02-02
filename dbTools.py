@@ -5,6 +5,8 @@ import struct
 from dataStores import *
 import os
 import shutil
+import uuid
+import time
 
 
 from ifstools import IFS
@@ -525,11 +527,20 @@ class IIDXMusicDB:
 		bc += self.header_array[3] * 2
 
 	def removeByTitle(self, title):
+		found_id = self.getIDByTitle(title)
+		if found_id is not None:
+			self.music_db.pop(found_id)
+
+	def getIDByTitle(self, title):
+
+		search_bytes = bytes(title, encoding="cp932")
+
 		for key in list(self.music_db.keys()):
 			old_title = self.music_db[key]["title"].strip(b"\x00")
-			if old_title == bytes(title, encoding="UTF-8"):
-				self.music_db.pop(key)
-				return
+			if old_title == search_bytes:
+				return key
+		
+		return None
 
 	def stripLowers(self, max_removable_sp = 12, max_removable_dp = 12):
 		if not (max_removable_sp in range(1, 13) or max_removable_dp in range(1, 13)):
@@ -748,8 +759,7 @@ class IIDXMusicDB:
 		return song_objects, chart_objects
 
 	def portOldTheoryMethods(self, chart_objects, OLD_THEORY_PATH):
-		song_objects = None
-		chart_objects = None
+		
 
 
 		# print(OLD_THEORY_PATH, song_objects, chart_objects, sep="\n")
@@ -758,12 +768,72 @@ class IIDXMusicDB:
 
 		for version_folder_name in os.listdir(OLD_THEORY_PATH):
 			version_path = os.path.join(OLD_THEORY_PATH, version_folder_name)
-
 			for method_file in os.listdir(version_path):
 				if method_file.endswith(".md"):
 					md_path = os.path.join(version_path, method_file)
+					with open(md_path, "r", encoding="utf-8") as f:
+						md_lines = [line.strip("\n") for line in f.readlines()]
+						song_title = md_lines[0][2:]
 
-					#TODO Check what song the md_file is for, port the methods to objects
+						supposed_id = self.getIDByTitle(song_title)
+
+						if supposed_id is None:
+							print(f"Title not found in database: {song_title}")
+							continue
+
+						song_diffs = makeDiffList(self.music_db[int(supposed_id)])
+
+						# Find max sp diff
+						max_diff_num = song_diffs.index(max(song_diffs[:5]))
+
+						method_chart_id = f"{supposed_id}_{max_diff_num}"
+
+						if method_chart_id not in chart_objects:
+							print(f"ERROR: chart_objects missing {supposed_id} ({song_title}) {SONG_POSSIBLE_DIFFS[max_diff_num]}")
+							continue
+
+
+						method_id = None
+						new_method = None
+
+						line_mode = None
+						for line in md_lines[1:]:
+							if line.startswith("##"):
+								if line[2:].startswith("☆") or line[2:].startswith("★"):
+
+									# Append existing method if not empty
+									if line_mode == "method":
+										chart_objects[method_chart_id]["methods"].append(method_id)
+										method_objects.update(new_method)
+									
+									# TODO Parse line to get difficulty and title
+
+									method_id = str(uuid.uuid4())
+									new_method = {method_id: {
+										"chart_id": method_chart_id,
+										"method_title": "",
+										"difficulty": -1,
+										"method_body": "",
+										"method_author": "Hethan",
+										"method_rating": 0,
+										"timestamp": int(time.time())
+									}}
+
+									line_mode = "method"
+								else:
+									line_mode = "preview"
+							else:
+								if line_mode == "method":
+									if new_method["method_body"] != "":
+										new_method["method_body"] += "\n"
+									new_method["method_body"] += line
+								elif line_mode == "preview":
+									# TODO Get the preview URL from the markdown file and extract the ID
+									pass
+
+						chart_objects[method_chart_id]["methods"].append(method_id)
+						method_objects.update(new_method)
+						print(method_objects)
 		
 		return method_objects
 
