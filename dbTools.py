@@ -793,47 +793,43 @@ class IIDXMusicDB:
 							continue
 
 
-						method_id = None
-						new_method = None
+						new_methods = {}
 
 						line_mode = None
 						for line in md_lines[1:]:
 							if line.startswith("##"):
-								if line[2:].startswith("☆") or line[2:].startswith("★"):
-
-									# Append existing method if not empty
-									if line_mode == "method":
-										chart_objects[method_chart_id]["methods"].append(method_id)
-										method_objects.update(new_method)
-									
-									# TODO Parse line to get difficulty and title
-
+								if line[3:].startswith("☆") or line[3:].startswith("★"):
+									# Start writing new method
 									method_id = str(uuid.uuid4())
-									new_method = {method_id: {
+									new_methods[method_id] = {
 										"chart_id": method_chart_id,
-										"method_title": "",
+										"title": "",
 										"difficulty": -1,
-										"method_body": "",
-										"method_author": "Hethan",
-										"method_rating": 0,
+										"body": "",
+										"author": "Hethan",
+										"rating": 0,
 										"timestamp": int(time.time())
-									}}
+									}
+									current_method = new_methods[method_id]
+									
+									current_method["difficulty"] = line.count("★")
+									current_method["title"] = line[9:]									
 
 									line_mode = "method"
 								else:
 									line_mode = "preview"
 							else:
 								if line_mode == "method":
-									if new_method["method_body"] != "":
-										new_method["method_body"] += "\n"
-									new_method["method_body"] += line
+									if current_method["body"] != "":
+										current_method["body"] += "\n"
+									current_method["body"] += line
 								elif line_mode == "preview":
 									# TODO Get the preview URL from the markdown file and extract the ID
 									pass
 
-						chart_objects[method_chart_id]["methods"].append(method_id)
-						method_objects.update(new_method)
-						print(method_objects)
+						for method_id in method_objects:
+							chart_objects[method_chart_id]["methods"].append(method_id)
+						method_objects.update(new_methods)
 		
 		return method_objects
 
