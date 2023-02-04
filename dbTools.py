@@ -817,7 +817,7 @@ class IIDXMusicDB:
 										"body": "",
 										"author": "Hethan",
 										"rating": 0,
-										"timestamp": int(time.time())
+										"timestamp": int(time.time()) * 1000
 									}
 									current_method = new_methods[method_id]
 									
