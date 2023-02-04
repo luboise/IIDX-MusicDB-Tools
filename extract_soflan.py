@@ -16,9 +16,10 @@ OMNI_SONG_PATH = None
 # Choose bin filenames here (put None to skip any)
 
 # Enter a clean .bin here from IIDX
-db_path = "RESIDENT 20221031.bin"
+db_path = "RESIDENT 20221031 0626.bin"
 
-contents_folder = "C:\\LDJ-003-2022101900\\contents"
+sound_folder = "C:\\LDJ-003-2022101900\\contents\\data\\sound"
+extra_folder = "C:\\LDJ-003-2022101900\\contents\\data_modss\\resident_omni\\sound"
 
 
 if __name__ == "__main__":
@@ -27,14 +28,14 @@ if __name__ == "__main__":
 	song_objects = None
 	chart_objects = None
 
-	USE_EXISTING_OBJECTS = True
+	USE_EXISTING_OBJECTS = False
 	if USE_EXISTING_OBJECTS:
 		with open("song_objects.json", "r", encoding="utf-8") as f:
 			song_objects = json.load(f)
 		with open("chart_objects.json", "r", encoding="utf-8") as f:
 			chart_objects = json.load(f)
 	else:
-		song_objects, chart_objects = pog_db.getSoflanCharts(contents_folder)
+		song_objects, chart_objects = pog_db.getSoflanCharts(sound_folder, extra_folder)
 
 	script_path = os.path.dirname(__file__)
 	OLD_THEORY_PATH = os.path.abspath(os.path.join(script_path, "..", "old_theory", "docs", "resources", "chartdirectory"))

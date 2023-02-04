@@ -7,6 +7,7 @@ import os
 import shutil
 import uuid
 import time
+import re
 
 
 from ifstools import IFS
@@ -532,7 +533,6 @@ class IIDXMusicDB:
 			self.music_db.pop(found_id)
 
 	def getIDByTitle(self, title):
-
 		search_bytes = bytes(title, encoding="cp932")
 
 		for key in list(self.music_db.keys()):
@@ -670,21 +670,19 @@ class IIDXMusicDB:
 
 
 
-	def getSoflanCharts(self, contents_folder):
-		if not os.path.isdir(contents_folder):
-			print(f"Given path is not a directory: {contents_folder}\nCould not get soflan chart list.")
+	def getSoflanCharts(self, *sound_folders):
+		if not len(sound_folders):
+			print("ERROR: No sound folders given")
 			return
 		
-		data_folder = os.path.join(contents_folder, "data")
-		if not os.path.isdir(data_folder):
-			print(f"ERROR: data folder missing in {contents_folder}\nCould not get soflan chart list.")
-			return
-
-		sound_folder = os.path.join(data_folder, "sound")
-		if not os.path.isdir(sound_folder):
-			print(f"ERROR: sound folder missing in {data_folder}")
-			return
-
+		for i, folder in enumerate(sound_folders):
+			if not os.path.isdir(folder):
+				if i == 0:
+					print(f"ERROR: Invalid base sound folder given {folder}")
+				else:
+					print(f"ERROR: Invalid extra sound folder given {folder}")
+				return
+		
 		song_objects = dict()
 		chart_objects = dict()
 
@@ -692,9 +690,10 @@ class IIDXMusicDB:
 			song_id = f"{song_id:05d}"
 
 			# Find or extract chart file
-			chart_filepath = getSongDotOnePathByID(sound_folder = sound_folder, song_id = song_id)
+			chart_filepath = getSongDotOnePathByID(sound_folders = sound_folders, song_id = song_id)
 			if not chart_filepath:
-				print(f"ERROR: Chart could not be located or extracted for ID {song_id}")				
+				print(f"ERROR: Chart could not be located or extracted for ID {song_id}")
+				continue			
 
 			# SPN SPH SPA SPB SPL --- DPN DPH DPA DPB DPL ---
 			# offset_ms: [numerator, denominator]
@@ -778,8 +777,17 @@ class IIDXMusicDB:
 						supposed_id = self.getIDByTitle(song_title)
 
 						if supposed_id is None:
-							print(f"Title not found in database: {song_title}")
-							continue
+							# Get the user to manually enter the song's ID
+							forged_id = input(f"Can't find {song_title} in the music_db. Enter the song's ID manually (ENTER to skip):")
+
+							# Skip if bad ID given
+							if not isInt(forged_id):
+								if forged_id != "":
+									print(f"Invalid id specified ({forged_id}).")
+								print(f"Skipping {song_title}...")
+								continue
+
+							supposed_id = int(forged_id)
 
 						song_diffs = makeDiffList(self.music_db[int(supposed_id)])
 
@@ -802,6 +810,7 @@ class IIDXMusicDB:
 									# Start writing new method
 									method_id = str(uuid.uuid4())
 									new_methods[method_id] = {
+										"approved": True,
 										"chart_id": method_chart_id,
 										"title": "",
 										"difficulty": -1,
@@ -813,7 +822,7 @@ class IIDXMusicDB:
 									current_method = new_methods[method_id]
 									
 									current_method["difficulty"] = line.count("★")
-									current_method["title"] = line[9:]									
+									current_method["title"] = re.sub("Method [0-9]+: ", "", line[9:])
 
 									line_mode = "method"
 								else:
@@ -827,33 +836,36 @@ class IIDXMusicDB:
 									# TODO Get the preview URL from the markdown file and extract the ID
 									pass
 
-						for method_id in method_objects:
+						for method_id in new_methods:
 							chart_objects[method_chart_id]["methods"].append(method_id)
 						method_objects.update(new_methods)
 		
 		return method_objects
 
 
-def getSongDotOnePathByID(sound_folder, song_id):
-	folder_style_chart_path = os.path.join(sound_folder, song_id, song_id + ".1")
-	ifs_style_chart_path = os.path.join(sound_folder, CUSTOM_EXTRACTION_PATH, song_id, f"{song_id}.1")
+def getSongDotOnePathByID(sound_folders, song_id):
+	for sound_folder in sound_folders:
+		folder_style_chart_path = os.path.join(sound_folder, song_id, song_id + ".1")
+		ifs_style_chart_path = os.path.join(sound_folder, CUSTOM_EXTRACTION_PATH, song_id, f"{song_id}.1")
 
-	if os.path.isfile(folder_style_chart_path):
-		return folder_style_chart_path
-	elif os.path.isfile(ifs_style_chart_path):
-		return ifs_style_chart_path
+		if os.path.isfile(folder_style_chart_path):
+			return folder_style_chart_path
+		elif os.path.isfile(ifs_style_chart_path):
+			return ifs_style_chart_path
 
-	ifs_path = os.path.join(sound_folder, f"{song_id}.ifs")
-	if not os.path.isfile(ifs_path):
-		print(f"ERROR: IFS file {ifs_path} doesn't exist.")
-		return False
-	
-	cleanExtractIFSNonRecursive(ifs_path, extraction_folder=CUSTOM_EXTRACTION_PATH)
-	if os.path.isfile(ifs_style_chart_path):
-		return ifs_style_chart_path
-	else:
-		print(f"ERROR: Could not find chart file (.1) after extraction at path {ifs_style_chart_path}.")
-		return None
+		ifs_path = os.path.join(sound_folder, f"{song_id}.ifs")
+		if not os.path.isfile(ifs_path):
+			continue
+		
+		cleanExtractIFSNonRecursive(ifs_path, extraction_folder=CUSTOM_EXTRACTION_PATH)
+		if os.path.isfile(ifs_style_chart_path):
+			return ifs_style_chart_path
+		else:
+			print(f"ERROR: Could not find chart file (.1) after extraction at path {ifs_style_chart_path}.")
+			return None
+		
+	print(f"IFS file {song_id}.ifs not found at any given sound folder path.")
+	return None
 	# print(f"File in wrong format: {os.path.basename(chart_filepath)}\nSkipping file.\n")
 
 def getSoflanFromFile(chart_filepath):
